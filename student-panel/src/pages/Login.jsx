@@ -27,7 +27,7 @@ function Login({ onLogin }) {
     }
     
     try {
-      const res = await axios.get(`http://localhost:4000/check-hallticket/${hallticket}`);
+      const res = await axios.get(`https://feedback-mlan.onrender.com/check-hallticket/${hallticket}`);
       
       if (!res.data.exists) {
         setValidation(prev => ({
@@ -74,7 +74,7 @@ function Login({ onLogin }) {
     }
     
     try {
-      const res = await axios.get(`http://localhost:4000/check-email/${email}`);
+      const res = await axios.get(`https://feedback-mlan.onrender.com/check-email/${email}`);
       
       if (!res.data.available) {
         setValidation(prev => ({
@@ -130,7 +130,7 @@ function Login({ onLogin }) {
     setLoadingType("register");
     
     try {
-      await axios.post("http://localhost:4000/register", register);
+      await axios.post("https://feedback-mlan.onrender.com/register", register);
       toast.success("Registered successfully!");
       setIsRegistering(false);
     } catch(e) {
@@ -152,7 +152,7 @@ function Login({ onLogin }) {
     setLoadingType("login");
     
     try {
-      const res = await axios.post("http://localhost:4000/login", login);
+      const res = await axios.post("https://feedback-mlan.onrender.com/login", login);
       localStorage.setItem('token', res.data.token);
       // Save student data to localStorage for persistence
       localStorage.setItem('studentData', JSON.stringify(res.data.student));
