@@ -1,59 +1,152 @@
 /* src/pages/Login.css */
-.login-page-wrapper {
-  min-height: calc(100vh - 200px); /* Adjusted for header and footer */
+.login-full-page {
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-.login-container {
+.login-content-wrapper {
   flex: 1;
   display: flex;
   justify-content: center;
   align-items: center;
   background: linear-gradient(135deg, #667eea 0%, #e6e4e8 100%);
-  padding: 30px 20px;
+  padding: 20px;
   position: relative;
   overflow: hidden;
 }
 
-/* Smaller animated background elements */
-.login-container::before {
-  content: '';
-  position: absolute;
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  background: linear-gradient(45deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
-  top: -40px;
-  right: -40px;
-  animation: float 15s ease-in-out infinite;
+/* Header Styles */
+.college-header {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  color: white;
+  padding: 12px 0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-.login-container::after {
-  content: '';
-  position: absolute;
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  background: linear-gradient(45deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
-  bottom: -30px;
-  left: -30px;
-  animation: float 12s ease-in-out infinite reverse;
+.header-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
 }
 
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-8px) rotate(5deg);
-  }
+.logo-container {
+  margin-right: 15px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
-/* Compact login form */
-.auth-form {
+.college-logo {
+  height: 60px;
+  width: auto;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.college-info {
+  text-align: left;
+  flex: 1;
+}
+
+.college-info h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.ugc-autonomous {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  opacity: 0.9;
+  font-weight: 600;
+}
+
+.college-address {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+/* Footer Styles */
+.college-footer {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  color: white;
+  padding: 15px 0;
+}
+
+.footer-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.footer-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.copyright p {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.developer-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.developer-info p {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.vsoft-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.vsoft-logo {
+  height: 20px;
+  width: auto;
+  border-radius: 3px;
+}
+
+.vsoft-info span {
+  font-weight: 600;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.linkedin-link {
+  display: flex;
+  align-items: center;
+  transition: opacity 0.3s;
+  margin-left: 5px;
+}
+
+.linkedin-link:hover {
+  opacity: 0.8;
+}
+
+/* Login Form Styles */
+.login-container {
   width: 100%;
   max-width: 380px;
+}
+
+.auth-form {
   padding: 20px;
   background: white;
   border-radius: 10px;
@@ -211,112 +304,100 @@ input.invalid {
   to { transform: rotate(360deg); }
 }
 
-/* Disabled state for inputs and buttons */
-.btn-primary:disabled,
-.form-group input:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-/* Reduced motion support for spinner */
-@media (prefers-reduced-motion: reduce) {
-  .loading-spinner {
-    animation: none;
-    border: 2px solid rgba(255, 255, 255, 0.6);
-    border-top-color: transparent;
-  }
-  
-  .login-container::before,
-  .login-container::after,
-  .auth-form::before {
-    animation: none;
-  }
-}
-
-/* Mobile-specific optimizations */
+/* Responsive Design */
 @media (max-width: 768px) {
-  .login-page-wrapper {
-    min-height: calc(100vh - 180px);
+  .header-container {
+    flex-direction: column;
+    text-align: center;
+    padding: 0 15px;
+    gap: 10px;
   }
   
-  .login-container {
-    padding: 20px 15px;
+  .logo-container {
+    margin-right: 0;
+  }
+  
+  .college-logo {
+    height: 50px;
+  }
+  
+  .college-info {
+    text-align: center;
+  }
+  
+  .college-info h1 {
+    font-size: 1.3rem;
+  }
+  
+  .ugc-autonomous {
+    font-size: 0.85rem;
+  }
+  
+  .college-address {
+    font-size: 0.8rem;
+  }
+  
+  .footer-content {
+    text-align: center;
+  }
+  
+  .vsoft-info {
+    justify-content: center;
+  }
+  
+  .login-content-wrapper {
+    padding: 15px;
   }
   
   .auth-form {
     padding: 18px;
-    max-width: 340px;
   }
   
   .auth-form h2 {
     font-size: 1.3rem;
-    margin-bottom: 10px;
-  }
-  
-  .auth-form p {
-    font-size: 0.85rem;
-    margin-bottom: 12px;
-  }
-  
-  .form-group {
-    margin-bottom: 10px;
-  }
-  
-  .form-group input {
-    padding: 9px 11px;
-    font-size: 13px;
-  }
-  
-  .btn-primary {
-    padding: 9px 14px;
-    font-size: 13px;
-    margin-bottom: 10px;
-  }
-  
-  .auth-switch {
-    font-size: 0.8rem;
-    margin-top: 10px;
-  }
-  
-  .login-container::before,
-  .login-container::after {
-    display: none;
   }
 }
 
 @media (max-width: 480px) {
-  .login-page-wrapper {
-    min-height: calc(100vh - 160px);
+  .college-header {
+    padding: 10px 0;
   }
   
-  .login-container {
-    padding: 15px 10px;
+  .college-info h1 {
+    font-size: 1.2rem;
+  }
+  
+  .college-footer {
+    padding: 12px 0;
+  }
+  
+  .copyright p,
+  .developer-info p {
+    font-size: 0.8rem;
+  }
+  
+  .login-content-wrapper {
+    padding: 10px;
   }
   
   .auth-form {
     padding: 16px;
-    max-width: 300px;
   }
   
   .auth-form h2 {
     font-size: 1.2rem;
   }
-  
-  .auth-form p {
-    font-size: 0.8rem;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .loading-spinner,
+  .auth-form::before {
+    animation: none;
   }
   
-  .form-group input {
-    padding: 8px 10px;
-    font-size: 12px;
-  }
-  
-  .btn-primary {
-    padding: 8px 12px;
-    font-size: 12px;
-  }
-  
-  .auth-switch {
-    font-size: 0.75rem;
+  .loading-spinner {
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    border-top-color: transparent;
   }
 }
