@@ -58,7 +58,7 @@ function StudentDashboard({ studentData, onLogout }) {
   const loadSemesters = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get("http://localhost:4000/student-semesters", {
+      const res = await axios.get("https://feedback-mlan.onrender.com/student-semesters", {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSemesters(res.data);
@@ -71,7 +71,7 @@ function StudentDashboard({ studentData, onLogout }) {
   const checkRoundAvailability = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get(`http://localhost:4000/round-status?class=${selectedSemester}&branch=${studentData.branch}&academicYear=${studentData.academicYear}`, {
+      const res = await axios.get(`https://feedback-mlan.onrender.com/round-status?class=${selectedSemester}&branch=${studentData.branch}&academicYear=${studentData.academicYear}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -92,7 +92,7 @@ function StudentDashboard({ studentData, onLogout }) {
   const loadSubjects = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get("http://localhost:4000/subjects", {
+      const res = await axios.get("https://feedback-mlan.onrender.com/subjects", {
         headers: { Authorization: `Bearer ${token}` },
         params: { 
           class: selectedSemester, 
@@ -116,7 +116,7 @@ function StudentDashboard({ studentData, onLogout }) {
   const checkSubmissionStatus = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res1 = await axios.get("http://localhost:4000/feedbackcheck", {
+      const res1 = await axios.get("https://feedback-mlan.onrender.com/feedbackcheck", {
         headers: { Authorization: `Bearer ${token}` },
         params: { 
           class: selectedSemester, 
@@ -126,7 +126,7 @@ function StudentDashboard({ studentData, onLogout }) {
         }
       });
       
-      const res2 = await axios.get("http://localhost:4000/feedbackcheck", {
+      const res2 = await axios.get("https://feedback-mlan.onrender.com/feedbackcheck", {
         headers: { Authorization: `Bearer ${token}` },
         params: { 
           class: selectedSemester, 
@@ -220,7 +220,7 @@ function StudentDashboard({ studentData, onLogout }) {
     
     try {
       const token = localStorage.getItem('token');
-      await axios.post("http://localhost:4000/feedback", {
+      await axios.post("https://feedback-mlan.onrender.com/feedback", {
         class: selectedSemester,
         branch: studentData.branch,
         academicYear: studentData.academicYear,
