@@ -21,7 +21,7 @@ const Footer = () => {
               <span>V Soft</span>
               Follow us on
               <a 
-                href="https://www.linkedin.com/in/vamshiramavat?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" 
+                href="https://www.linkedin.com/in/vamshiramavat/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="linkedin-link"
