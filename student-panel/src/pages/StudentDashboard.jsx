@@ -15,7 +15,7 @@ const QUESTIONS = [
   "Teacher's commands and control of the class",
   "Attitude of the teacher towards the students",
   "Use of board & audio visual aids by the teacher",
-  "Your opinion about the teacher"
+  "Accessibility of teacher after class hours"
 ];
 
 function StudentDashboard({ studentData, onLogout }) {
