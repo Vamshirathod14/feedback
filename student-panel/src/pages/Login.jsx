@@ -1,4 +1,4 @@
-// src/pages/Login.jsx
+ // src/pages/Login.jsx
 import React, { useState } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
@@ -7,14 +7,22 @@ import './Login.css';
 
 function Login({ onLogin }) {
   const [isRegistering, setIsRegistering] = useState(false);
-  const [register, setRegister] = useState({ email: "", password: "", hallticket: "" });
+  const [register, setRegister] = useState({ 
+    email: "", 
+    password: "", 
+    confirmPassword: "",
+    hallticket: "" 
+  });
   const [login, setLogin] = useState({ hallticket: "", password: "" });
   const [validation, setValidation] = useState({
     hallticket: { isValid: false, message: "" },
-    email: { isValid: false, message: "" }
+    email: { isValid: false, message: "" },
+    password: { isValid: false, message: "" }
   });
   const [isLoading, setIsLoading] = useState(false);
   const [loadingType, setLoadingType] = useState(""); // "login" or "register"
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Check if hallticket is valid and available for registration
   const checkHallticket = async (hallticket) => {
@@ -27,7 +35,7 @@ function Login({ onLogin }) {
     }
     
     try {
-      const res = await axios.get(`https://feedback-mlan.onrender.com/check-hallticket/${hallticket}`);
+      const res = await axios.get(`http://localhost:4000/check-hallticket/${hallticket}`);
       
       if (!res.data.exists) {
         setValidation(prev => ({
@@ -74,7 +82,7 @@ function Login({ onLogin }) {
     }
     
     try {
-      const res = await axios.get(`https://feedback-mlan.onrender.com/check-email/${email}`);
+      const res = await axios.get(`http://localhost:4000/check-email/${email}`);
       
       if (!res.data.available) {
         setValidation(prev => ({
@@ -95,6 +103,50 @@ function Login({ onLogin }) {
     }
   };
 
+  // Check password strength and confirm password match
+  const checkPassword = (password, confirmPassword = register.confirmPassword) => {
+    if (!password) {
+      setValidation(prev => ({
+        ...prev,
+        password: { isValid: false, message: "Please enter a password" }
+      }));
+      return;
+    }
+
+    // Password strength validation
+    if (password.length < 6) {
+      setValidation(prev => ({
+        ...prev,
+        password: { isValid: false, message: "Password must be at least 6 characters long" }
+      }));
+      return;
+    }
+
+    // Check if passwords match
+    if (confirmPassword && password !== confirmPassword) {
+      setValidation(prev => ({
+        ...prev,
+        password: { isValid: false, message: "Passwords do not match" }
+      }));
+      return;
+    }
+
+    if (!confirmPassword) {
+      setValidation(prev => ({
+        ...prev,
+        password: { isValid: true, message: "Password is valid" }
+      }));
+      return;
+    }
+
+    if (password === confirmPassword) {
+      setValidation(prev => ({
+        ...prev,
+        password: { isValid: true, message: "Passwords match" }
+      }));
+    }
+  };
+
   // Handle hallticket input change
   const handleHallticketChange = (e) => {
     const value = e.target.value;
@@ -109,9 +161,23 @@ function Login({ onLogin }) {
     checkEmail(value);
   };
 
+  // Handle password change
+  const handlePasswordChange = (e) => {
+    const value = e.target.value;
+    setRegister({ ...register, password: value });
+    checkPassword(value);
+  };
+
+  // Handle confirm password change
+  const handleConfirmPasswordChange = (e) => {
+    const value = e.target.value;
+    setRegister({ ...register, confirmPassword: value });
+    checkPassword(register.password, value);
+  };
+
   // Register only if hallticket exists and is not already registered
   const handleRegister = async () => {
-    if (!register.email || !register.password || !register.hallticket) {
+    if (!register.email || !register.password || !register.confirmPassword || !register.hallticket) {
       toast.error("Please fill all fields!");
       return;
     }
@@ -125,14 +191,33 @@ function Login({ onLogin }) {
       toast.error("Please enter a valid email address");
       return;
     }
+
+    if (!validation.password.isValid) {
+      toast.error("Please ensure passwords match and meet requirements");
+      return;
+    }
+    
+    if (register.password !== register.confirmPassword) {
+      toast.error("Passwords do not match!");
+      return;
+    }
     
     setIsLoading(true);
     setLoadingType("register");
     
     try {
-      await axios.post("https://feedback-mlan.onrender.com/register", register);
+      // Remove confirmPassword before sending to API
+      const { confirmPassword, ...registerData } = register;
+      await axios.post("http://localhost:4000/register", registerData);
       toast.success("Registered successfully!");
       setIsRegistering(false);
+      // Reset form
+      setRegister({ email: "", password: "", confirmPassword: "", hallticket: "" });
+      setValidation({
+        hallticket: { isValid: false, message: "" },
+        email: { isValid: false, message: "" },
+        password: { isValid: false, message: "" }
+      });
     } catch(e) {
       toast.error(e.response?.data?.error || "Registration failed");
     } finally {
@@ -152,7 +237,7 @@ function Login({ onLogin }) {
     setLoadingType("login");
     
     try {
-      const res = await axios.post("https://feedback-mlan.onrender.com/login", login);
+      const res = await axios.post("http://localhost:4000/login", login);
       localStorage.setItem('token', res.data.token);
       // Save student data to localStorage for persistence
       localStorage.setItem('studentData', JSON.stringify(res.data.student));
@@ -164,6 +249,15 @@ function Login({ onLogin }) {
       setIsLoading(false);
       setLoadingType("");
     }
+  };
+
+  // Toggle password visibility
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
   };
 
   // Header Component
@@ -241,15 +335,21 @@ function Login({ onLogin }) {
                   disabled={isLoading}
                 />
               </div>
-              <div className="form-group">
+              <div className="form-group password-input-group">
                 <input 
-                  type="password" 
+                  type={showPassword ? "text" : "password"}
                   placeholder="Password" 
                   value={login.password} 
                   onChange={e => setLogin({...login, password: e.target.value})}
                   required
                   disabled={isLoading}
                 />
+                <span 
+                  className="password-toggle"
+                  onClick={togglePasswordVisibility}
+                >
+                  {showPassword ? "🙈" : "👁️"}
+                </span>
               </div>
               <button 
                 onClick={handleLogin} 
@@ -310,21 +410,53 @@ function Login({ onLogin }) {
                 )}
               </div>
               
-              <div className="form-group">
+              <div className="form-group password-input-group">
                 <input 
-                  type="password" 
+                  type={showPassword ? "text" : "password"}
                   placeholder="Password" 
                   value={register.password} 
-                  onChange={e => setRegister({...register, password: e.target.value})}
+                  onChange={handlePasswordChange}
+                  onBlur={() => checkPassword(register.password)}
                   required
+                  className={validation.password.isValid ? "valid" : validation.password.message ? "invalid" : ""}
                   disabled={isLoading}
                 />
+                <span 
+                  className="password-toggle"
+                  onClick={togglePasswordVisibility}
+                >
+                  {showPassword ? "🙈" : "👁️"}
+                </span>
+                {validation.password.message && (
+                  <div className={`validation-message ${validation.password.isValid ? "valid" : "invalid"}`}>
+                    {validation.password.message}
+                  </div>
+                )}
+              </div>
+
+              <div className="form-group password-input-group">
+                <input 
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="Confirm Password" 
+                  value={register.confirmPassword} 
+                  onChange={handleConfirmPasswordChange}
+                  onBlur={() => checkPassword(register.password, register.confirmPassword)}
+                  required
+                  className={validation.password.isValid && register.confirmPassword ? "valid" : validation.password.message && register.confirmPassword ? "invalid" : ""}
+                  disabled={isLoading}
+                />
+                <span 
+                  className="password-toggle"
+                  onClick={toggleConfirmPasswordVisibility}
+                >
+                  {showConfirmPassword ? "🙈" : "👁️"}
+                </span>
               </div>
               
               <button 
                 onClick={handleRegister} 
                 className="btn-primary"
-                disabled={!validation.hallticket.isValid || !validation.email.isValid || !register.password || isLoading}
+                disabled={!validation.hallticket.isValid || !validation.email.isValid || !validation.password.isValid || !register.password || !register.confirmPassword || isLoading}
               >
                 {isLoading && loadingType === "register" ? (
                   <>
