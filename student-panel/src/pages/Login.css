@@ -267,41 +267,46 @@
   text-decoration: underline;
 }
 
-/* Password Input Group Styles */
+/* FIXED Password Input Group Styles */
 .password-input-group {
   position: relative;
 }
 
+/* FIXED: Proper padding for ALL password inputs */
+.password-input-group input {
+  padding-right: 50px !important;
+}
+
+/* FIXED: Eye icon positioning */
 .password-toggle {
   position: absolute;
-  right: 12px;
+  right: 15px;
   top: 50%;
   transform: translateY(-50%);
   cursor: pointer;
-  font-size: 16px;
+  font-size: 18px;
   user-select: none;
-  background: white;
-  padding: 4px 6px;
+  background: transparent;
+  padding: 5px;
   border-radius: 4px;
-  z-index: 2;
+  z-index: 3;
   opacity: 0.6;
   transition: all 0.2s ease;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid transparent;
+  border: none;
 }
 
 .password-toggle:hover {
   opacity: 1;
-  background: #f8f9fa;
-  border-color: #e6e6e6;
+  background: #f0f0f0;
 }
 
-.password-input-group input {
-  padding-right: 50px !important;
+.password-toggle:active {
+  background: #e0e0e0;
 }
 
 /* Validation Styles */
@@ -402,8 +407,7 @@ input.invalid {
 }
 
 .password-toggle:disabled:hover {
-  background: white;
-  border-color: transparent;
+  background: transparent;
   opacity: 0.4;
 }
 
@@ -465,10 +469,15 @@ input.invalid {
   }
   
   .password-toggle {
-    right: 10px;
-    width: 28px;
-    height: 28px;
-    font-size: 15px;
+    right: 12px;
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
+  }
+  
+  /* FIXED: Mobile padding */
+  .password-input-group input {
+    padding-right: 45px !important;
   }
 }
 
@@ -518,15 +527,15 @@ input.invalid {
   }
   
   .password-toggle {
-    right: 8px;
-    width: 26px;
-    height: 26px;
-    font-size: 14px;
-    padding: 3px 5px;
+    right: 10px;
+    width: 28px;
+    height: 28px;
+    font-size: 15px;
   }
   
+  /* FIXED: Small screen padding */
   .password-input-group input {
-    padding-right: 45px !important;
+    padding-right: 40px !important;
   }
   
   .btn-primary {
@@ -569,8 +578,7 @@ input.invalid {
   }
   
   .password-toggle {
-    border-width: 2px;
-    border-color: #000;
+    border: 2px solid #000;
   }
 }
 
@@ -605,7 +613,7 @@ input.invalid {
   }
   
   .password-toggle {
-    background: #4a5568;
+    background: transparent;
     color: #e2e8f0;
   }
   

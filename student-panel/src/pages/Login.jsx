@@ -1,9 +1,11 @@
- // src/pages/Login.jsx
 import React, { useState } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import './Login.css';
+
+// API base URL configuration
+const API_BASE_URL = 'https://feedback-mlan.onrender.com';
 
 function Login({ onLogin }) {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -35,7 +37,9 @@ function Login({ onLogin }) {
     }
     
     try {
-      const res = await axios.get(`https://feedback-mlan.onrender.com/check-hallticket/${hallticket}`);
+      const res = await axios.get(`${API_BASE_URL}/check-hallticket/${hallticket}`, {
+        timeout: 10000
+      });
       
       if (!res.data.exists) {
         setValidation(prev => ({
@@ -54,9 +58,10 @@ function Login({ onLogin }) {
         }));
       }
     } catch (error) {
+      console.error('Hallticket check error:', error);
       setValidation(prev => ({
         ...prev,
-        hallticket: { isValid: false, message: "Error checking hallticket" }
+        hallticket: { isValid: false, message: "Error checking hallticket. Please try again." }
       }));
     }
   };
@@ -82,7 +87,9 @@ function Login({ onLogin }) {
     }
     
     try {
-      const res = await axios.get(`https://feedback-mlan.onrender.com/check-email/${email}`);
+      const res = await axios.get(`${API_BASE_URL}/check-email/${email}`, {
+        timeout: 10000
+      });
       
       if (!res.data.available) {
         setValidation(prev => ({
@@ -96,9 +103,10 @@ function Login({ onLogin }) {
         }));
       }
     } catch (error) {
+      console.error('Email check error:', error);
       setValidation(prev => ({
         ...prev,
-        email: { isValid: false, message: "Error checking email" }
+        email: { isValid: false, message: "Error checking email. Please try again." }
       }));
     }
   };
@@ -208,25 +216,51 @@ function Login({ onLogin }) {
     try {
       // Remove confirmPassword before sending to API
       const { confirmPassword, ...registerData } = register;
-      await axios.post("https://feedback-mlan.onrender.com/register", registerData);
-      toast.success("Registered successfully!");
-      setIsRegistering(false);
-      // Reset form
-      setRegister({ email: "", password: "", confirmPassword: "", hallticket: "" });
-      setValidation({
-        hallticket: { isValid: false, message: "" },
-        email: { isValid: false, message: "" },
-        password: { isValid: false, message: "" }
+      const res = await axios.post(`${API_BASE_URL}/register`, registerData, {
+        timeout: 15000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
-    } catch(e) {
-      toast.error(e.response?.data?.error || "Registration failed");
+      
+      if (res.data.success) {
+        toast.success("Registered successfully!");
+        setIsRegistering(false);
+        // Reset form
+        setRegister({ email: "", password: "", confirmPassword: "", hallticket: "" });
+        setValidation({
+          hallticket: { isValid: false, message: "" },
+          email: { isValid: false, message: "" },
+          password: { isValid: false, message: "" }
+        });
+      } else {
+        toast.error(res.data.error || "Registration failed");
+      }
+    } catch(error) {
+      console.error('Registration error:', error);
+      
+      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        toast.error("⌛ Registration timeout. Please check your internet and try again.");
+      } 
+      else if (error.message === 'Network Error' || !error.response) {
+        toast.error("🌐 Network error. Please check your internet connection.");
+      }
+      else if (error.response?.status === 400) {
+        toast.error(error.response.data.error || "Registration data invalid.");
+      }
+      else if (error.response?.status === 409) {
+        toast.error("📧 Email or hallticket already registered.");
+      }
+      else {
+        toast.error(error.response?.data?.error || "Registration failed. Please try again.");
+      }
     } finally {
       setIsLoading(false);
       setLoadingType("");
     }
   };
 
-  // Login
+  // Login with enhanced error handling
   const handleLogin = async () => {
     if (!login.hallticket || !login.password) {
       toast.error("Please fill all fields!");
@@ -237,14 +271,56 @@ function Login({ onLogin }) {
     setLoadingType("login");
     
     try {
-      const res = await axios.post("https://feedback-mlan.onrender.com/login", login);
-      localStorage.setItem('token', res.data.token);
-      // Save student data to localStorage for persistence
-      localStorage.setItem('studentData', JSON.stringify(res.data.student));
-      onLogin(res.data.student);
-      toast.success("Login successful!");
-    } catch(e) {
-      toast.error(e.response?.data?.error || "Login failed");
+      const res = await axios.post(`${API_BASE_URL}/login`, login, {
+        timeout: 15000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (res.data.success) {
+        localStorage.setItem('token', res.data.token);
+        // Save student data to localStorage for persistence
+        localStorage.setItem('studentData', JSON.stringify(res.data.student));
+        onLogin(res.data.student);
+        toast.success("Login successful!");
+      } else {
+        toast.error(res.data.error || "Login failed");
+      }
+    } catch(error) {
+      console.error('Login error details:', error);
+      
+      // Network-related errors
+      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        toast.error("⌛ Connection timeout. Please check your internet and try again.");
+      } 
+      else if (error.message === 'Network Error' || !error.response) {
+        toast.error("🌐 Network error. Please check your internet connection.");
+      }
+      // Server errors (5xx)
+      else if (error.response?.status >= 500) {
+        toast.error("🔧 Server error. Please try again in a few minutes.");
+      }
+      // Client errors (4xx)
+      else if (error.response?.status === 400) {
+        toast.error(error.response.data.error || "❌ Invalid hallticket or password.");
+      }
+      else if (error.response?.status === 401) {
+        toast.error("🔐 Authentication failed. Please login again.");
+      }
+      else if (error.response?.status === 403) {
+        toast.error("🚫 Access forbidden. Please contact administrator.");
+      }
+      else if (error.response?.status === 404) {
+        toast.error("🔍 Service not found. Please contact support.");
+      }
+      // CORS errors
+      else if (error.response?.status === 0) {
+        toast.error("🛡️ Connection blocked by browser. Try refreshing or using different browser.");
+      }
+      else {
+        toast.error(error.response?.data?.error || "Login failed. Please try again.");
+      }
     } finally {
       setIsLoading(false);
       setLoadingType("");
@@ -320,7 +396,17 @@ function Login({ onLogin }) {
       <Header />
       <div className="login-content-wrapper">
         <div className="login-container">
-          <ToastContainer />
+          <ToastContainer 
+            position="top-right"
+            autoClose={5000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+          />
           
           {!isRegistering ? (
             <div className="auth-form">

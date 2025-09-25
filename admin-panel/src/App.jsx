@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import FeedbackSubmissionTracker from './FeedbackSubmissionTracker';
 import { Pie, Bar } from "react-chartjs-2";
 import './App.css'
 import {
@@ -737,7 +738,6 @@ function Admin() {
     <div className="admin-panel">
       <ToastContainer />
       <h2>Admin Panel - Feedback Management System</h2>
-      
       <div className="selection-section">
         <h3>Select Class, Branch and Academic Year</h3>
         <div className="selection-row">
@@ -813,7 +813,9 @@ function Admin() {
           </div>
         )}
       </div>
-
+          <div className="App">
+      <FeedbackSubmissionTracker />
+    </div>
       {classSel && branchSel && academicYear && (
         <>
           <div className="upload-section">

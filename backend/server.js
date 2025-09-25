@@ -976,5 +976,52 @@ app.get('/round-status', async (req, res) => {
   }
 });
 
+
+// Get all students for a class, branch, and academic year
+// Get all students for a class, branch, and academic year
+app.get('/admin/students', async (req, res) => {
+  try {
+    const { class: cls, branch, academicYear } = req.query;
+    
+    if (!cls || !branch || !academicYear) {
+      return res.status(400).json({ error: 'Class, branch, and academic year are required' });
+    }
+    
+    const students = await Student.find({ 
+      branch: branch, 
+      academicYear: academicYear 
+    }).select('name hallticket branch academicYear -_id');
+    
+    res.json(students);
+  } catch (error) {
+    console.error('Failed to fetch students:', error);
+    res.status(500).json({ error: 'Failed to fetch students' });
+  }
+});
+
+// Get all feedback submissions for a class, branch, and academic year
+app.get('/feedback-submissions', async (req, res) => {
+  try {
+    const { class: cls, branch, academicYear } = req.query;
+    
+    if (!cls || !branch || !academicYear) {
+      return res.status(400).json({ error: 'Class, branch, and academic year are required' });
+    }
+    
+    const submissions = await FeedbackSubmission.find({ 
+      class: cls, 
+      branch: branch, 
+      academicYear: academicYear 
+    }).select('hallticket initial final initialDate finalDate -_id');
+    
+    res.json(submissions);
+  } catch (error) {
+    console.error('Failed to fetch feedback submissions:', error);
+    res.status(500).json({ error: 'Failed to fetch feedback submissions' });
+  }
+});
+
+
+
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}...`));
