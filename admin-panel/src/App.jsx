@@ -4,7 +4,6 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import FeedbackSubmissionTracker from './FeedbackSubmissionTracker';
 import { Pie, Bar } from "react-chartjs-2";
-import FeedbackSubmissionTracker from './FeedbackSubmissionTracker';
 
 import './App.css'
 import {
@@ -819,10 +818,7 @@ function Admin() {
           <div className="App">
       <FeedbackSubmissionTracker />
     </div>
-       
-    <div className="App">
-      <FeedbackSubmissionTracker />
-    </div>
+  
       {classSel && branchSel && academicYear && (
         <>
           <div className="upload-section">
