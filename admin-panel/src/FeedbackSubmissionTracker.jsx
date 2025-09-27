@@ -321,7 +321,10 @@ function FeedbackSubmissionTracker() {
 
           <div className="student-details">
             <h4>Student Submission Details</h4>
-            
+            <div className="round-tabs">
+              <button className="tab-active">All Students</button>
+            </div>
+
             <div className="student-table">
               <table>
                 <thead>
@@ -357,6 +360,151 @@ function FeedbackSubmissionTracker() {
           </div>
         </div>
       )}
+
+      <style jsx>{`
+        .feedback-tracker {
+          padding: 20px;
+          max-width: 1200px;
+          margin: 0 auto;
+        }
+
+        .selection-row {
+          display: flex;
+          gap: 15px;
+          margin-bottom: 20px;
+          flex-wrap: wrap;
+          align-items: end;
+        }
+
+        .form-select {
+          padding: 8px 12px;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          min-width: 150px;
+        }
+
+        .btn-primary {
+          padding: 8px 16px;
+          background-color: #007bff;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+
+        .btn-primary:disabled {
+          background-color: #6c757d;
+          cursor: not-allowed;
+        }
+
+        .summary-cards {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 20px;
+          margin: 20px 0;
+        }
+
+        .summary-card {
+          border: 1px solid #ddd;
+          border-radius: 8px;
+          padding: 20px;
+          text-align: center;
+          background-color: #f8f9fa;
+        }
+
+        .summary-card h4 {
+          margin: 0 0 10px 0;
+          color: #495057;
+        }
+
+        .count {
+          font-size: 2em;
+          font-weight: bold;
+          color: #007bff;
+        }
+
+        .submitted {
+          color: #28a745;
+          font-weight: bold;
+        }
+
+        .not-submitted {
+          color: #dc3545;
+          font-weight: bold;
+        }
+
+        .percentage {
+          color: #6c757d;
+          font-size: 0.9em;
+        }
+
+        .download-options {
+          margin: 30px 0;
+          padding: 20px;
+          border: 1px solid #dee2e6;
+          border-radius: 8px;
+        }
+
+        .download-buttons {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+
+        .btn-download {
+          padding: 10px 15px;
+          background-color: #28a745;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+
+        .student-table {
+          overflow-x: auto;
+          margin-top: 20px;
+        }
+
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 14px;
+        }
+
+        th, td {
+          padding: 12px;
+          text-align: left;
+          border-bottom: 1px solid #dee2e6;
+        }
+
+        th {
+          background-color: #343a40;
+          color: white;
+          font-weight: bold;
+        }
+
+        tr.even {
+          background-color: #f8f9fa;
+        }
+
+        tr:hover {
+          background-color: #e9ecef;
+        }
+
+        @media (max-width: 768px) {
+          .selection-row {
+            flex-direction: column;
+          }
+          
+          .form-select {
+            width: 100%;
+          }
+          
+          .download-buttons {
+            flex-direction: column;
+          }
+        }
+      `}</style>
     </div>
   );
 }

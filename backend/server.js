@@ -13,6 +13,25 @@ app.use(express.json());
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/feedbackSystem');
 
+const corsOptions = {
+  origin: [
+    'https://feedback-student-panel.onrender.com',
+    'http://feedback-student-panel.onrender.com',
+    'https://feedback-mlan.onrender.com',
+    'http://feedback-mlan.onrender.com',
+    'http://localhost:3000',
+    'http://localhost:4000'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  exposedHeaders: ['Authorization']
+};
+
+app.use(cors(corsOptions));
+
+// Handle preflight requests
+app.options('*', cors(corsOptions));
 // Models
 const StudentSchema = new mongoose.Schema({
   name: String,
@@ -128,7 +147,15 @@ function parseCSV(csvString, isSubjects = false) {
   
   return result;
 }
-
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    message: 'Server is running',
+    timestamp: new Date().toISOString(),
+    cors: 'Enabled for all origins'
+  });
+});
 // Admin: Upload students CSV
 app.post('/upload-students', upload.single('file'), async (req, res) => {
   try {
@@ -978,7 +1005,6 @@ app.get('/round-status', async (req, res) => {
 
 
 // Get all students for a class, branch, and academic year
-// Get all students for a class, branch, and academic year
 app.get('/admin/students', async (req, res) => {
   try {
     const { class: cls, branch, academicYear } = req.query;
@@ -1020,8 +1046,6 @@ app.get('/feedback-submissions', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch feedback submissions' });
   }
 });
-
-
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}...`));

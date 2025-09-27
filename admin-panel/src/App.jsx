@@ -4,6 +4,8 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import FeedbackSubmissionTracker from './FeedbackSubmissionTracker';
 import { Pie, Bar } from "react-chartjs-2";
+import FeedbackSubmissionTracker from './FeedbackSubmissionTracker';
+
 import './App.css'
 import {
   Chart as ChartJS,
@@ -59,6 +61,7 @@ function Admin() {
   const [classReportData, setClassReportData] = useState(null);
   const [departmentReportData, setDepartmentReportData] = useState(null);
 
+  
   // Function to convert academic year to graduation year format for database
   const convertToGraduationYear = (academicYear, classSel) => {
     if (!academicYear) return "";
@@ -814,6 +817,10 @@ function Admin() {
         )}
       </div>
           <div className="App">
+      <FeedbackSubmissionTracker />
+    </div>
+       
+    <div className="App">
       <FeedbackSubmissionTracker />
     </div>
       {classSel && branchSel && academicYear && (
