@@ -1,3 +1,4 @@
+// src/pages/Login.jsx
 import React, { useState } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
@@ -25,6 +26,110 @@ function Login({ onLogin }) {
   const [loadingType, setLoadingType] = useState(""); // "login" or "register"
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showTechSupport, setShowTechSupport] = useState(false);
+
+  // Technical Support Component
+  const TechnicalSupport = () => {
+    if (!showTechSupport) return null;
+
+    const contactDetails = {
+      developer: {
+        name: "Vamshi Ramavath",
+        email: "vamshinaikramavath@gmail.com",
+        phone: "+91 9014243908",
+        role: "Lead Developer - V Soft"
+      }
+    };
+
+    const handleContact = (method) => {
+      switch (method) {
+        case 'email':
+          window.open(`mailto:${contactDetails.developer.email}?subject=Feedback System Support&body=Hello Vamshi, I need help with the feedback system.`);
+          break;
+        case 'whatsapp':
+          window.open(`https://wa.me/919014243908?text=Hello%20Vamshi,%20I%20need%20help%20with%20the%20feedback%20system.`);
+          break;
+        case 'phone':
+          window.open(`tel:${contactDetails.developer.phone}`);
+          break;
+        default:
+          break;
+      }
+    };
+
+    return (
+      <div className="support-modal-overlay" onClick={() => setShowTechSupport(false)}>
+        <div className="support-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="support-header">
+            <h3>🛠️ Developer Support</h3>
+            <button className="support-close" onClick={() => setShowTechSupport(false)}>×</button>
+          </div>
+          
+          <div className="support-content">
+            <div className="support-section">
+              <div className="contact-card">
+                <div className="contact-info">
+                  <strong>{contactDetails.developer.name}</strong>
+                  <p>{contactDetails.developer.role}</p>
+                  <p>📧 {contactDetails.developer.email}</p>
+                  <p>📱 {contactDetails.developer.phone}</p>
+                </div>
+                <div className="contact-actions">
+                  <button onClick={() => handleContact('email')} className="btn-email">
+                    📧 Email
+                  </button>
+                  <button onClick={() => handleContact('whatsapp')} className="btn-whatsapp">
+                    💬 WhatsApp
+                  </button>
+                  <button onClick={() => handleContact('phone')} className="btn-call">
+                    📞 Call
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="quick-solutions">
+              <h4>🚀 Quick Solutions</h4>
+              <div className="solutions-list">
+                <div className="solution-item">
+                  <span className="solution-icon">🌐</span>
+                  <div>
+                    <strong>Check Internet Connection</strong>
+                    <p>Ensure you have stable internet access</p>
+                  </div>
+                </div>
+                <div className="solution-item">
+                  <span className="solution-icon">🧹</span>
+                  <div>
+                    <strong>Clear Browser Cache</strong>
+                    <p>Clear cache and try again</p>
+                  </div>
+                </div>
+                <div className="solution-item">
+                  <span className="solution-icon">🔍</span>
+                  <div>
+                    <strong>Try Different Browser</strong>
+                    <p>Use Chrome, Firefox, or Edge</p>
+                  </div>
+                </div>
+                <div className="solution-item">
+                  <span className="solution-icon">🔄</span>
+                  <div>
+                    <strong>Restart Device</strong>
+                    <p>Sometimes a simple restart helps</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="support-footer">
+              <p>I'll respond to your query as soon as possible! ⚡</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   // Check if hallticket is valid and available for registration
   const checkHallticket = async (hallticket) => {
@@ -455,6 +560,10 @@ function Login({ onLogin }) {
               <p className="auth-switch">
                 Not registered? <span onClick={() => !isLoading && setIsRegistering(true)}>Register here</span>
               </p>
+              
+              <p className="tech-support-link">
+                Having trouble? <span onClick={() => setShowTechSupport(true)}>Contact Developer</span>
+              </p>
             </div>
           ) : (
             <div className="auth-form">
@@ -557,10 +666,18 @@ function Login({ onLogin }) {
               <p className="auth-switch">
                 Already registered? <span onClick={() => !isLoading && setIsRegistering(false)}>Login here</span>
               </p>
+              
+              <p className="tech-support-link">
+                Having trouble? <span onClick={() => setShowTechSupport(true)}>Contact Developer</span>
+              </p>
             </div>
           )}
         </div>
       </div>
+      
+      {/* Technical Support Modal */}
+      <TechnicalSupport />
+      
       <Footer />
     </div>
   );

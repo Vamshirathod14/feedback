@@ -637,3 +637,275 @@ input.invalid {
     display: none;
   }
 }
+/* Technical Support Styles */
+.support-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+.support-modal {
+  background: white;
+  border-radius: 15px;
+  max-width: 450px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.support-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 25px 25px 0;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 20px;
+}
+
+.support-header h3 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.4em;
+}
+
+.support-close {
+  background: none;
+  border: none;
+  font-size: 2em;
+  cursor: pointer;
+  color: #7f8c8d;
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.support-close:hover {
+  background: #f8f9fa;
+  color: #e74c3c;
+}
+
+.support-content {
+  padding: 0 25px 25px;
+}
+
+.support-section {
+  margin-bottom: 25px;
+}
+
+.contact-card {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+}
+
+.contact-info strong {
+  display: block;
+  color: #2c3e50;
+  font-size: 1.2em;
+  margin-bottom: 5px;
+}
+
+.contact-info p {
+  margin: 5px 0;
+  color: #7f8c8d;
+  font-size: 0.95em;
+}
+
+.contact-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.contact-actions button {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9em;
+  transition: all 0.3s ease;
+  min-width: 90px;
+}
+
+.btn-email {
+  background: #3498db;
+  color: white;
+}
+
+.btn-email:hover {
+  background: #2980b9;
+  transform: translateY(-2px);
+}
+
+.btn-whatsapp {
+  background: #25D366;
+  color: white;
+}
+
+.btn-whatsapp:hover {
+  background: #128C7E;
+  transform: translateY(-2px);
+}
+
+.btn-call {
+  background: #e74c3c;
+  color: white;
+}
+
+.btn-call:hover {
+  background: #c0392b;
+  transform: translateY(-2px);
+}
+
+.quick-solutions h4 {
+  color: #2c3e50;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.solutions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.solution-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.solution-item:hover {
+  background: #e9ecef;
+  transform: translateX(5px);
+}
+
+.solution-icon {
+  font-size: 1.3em;
+  flex-shrink: 0;
+}
+
+.solution-item div {
+  text-align: left;
+}
+
+.solution-item strong {
+  display: block;
+  color: #2c3e50;
+  margin-bottom: 3px;
+  font-size: 0.95em;
+}
+
+.solution-item p {
+  margin: 0;
+  color: #7f8c8d;
+  font-size: 0.85em;
+}
+
+.support-footer {
+  text-align: center;
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+
+.support-footer p {
+  margin: 0;
+  color: #7f8c8d;
+  font-style: italic;
+}
+
+.tech-support-link {
+  margin-top: 15px;
+  font-size: 0.9em;
+  color: #7f8c8d;
+  text-align: center;
+}
+
+.tech-support-link span {
+  color: #3498db;
+  cursor: pointer;
+  font-weight: 600;
+  text-decoration: underline;
+  transition: all 0.3s ease;
+}
+
+.tech-support-link span:hover {
+  color: #2980b9;
+}
+
+/* Responsive Design for Support */
+@media (max-width: 768px) {
+  .support-modal {
+    margin: 10px;
+    max-width: calc(100% - 20px);
+  }
+  
+  .contact-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .contact-actions button {
+    width: 100%;
+    max-width: 200px;
+  }
+}
+
+@media (max-width: 480px) {
+  .support-content {
+    padding: 0 15px 15px;
+  }
+  
+  .support-header {
+    padding: 15px 15px 0;
+  }
+  
+  .contact-card {
+    padding: 15px;
+  }
+  
+  .solution-item {
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
+  }
+  
+  .solution-item div {
+    text-align: center;
+  }
+}
