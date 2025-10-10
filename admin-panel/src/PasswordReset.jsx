@@ -47,7 +47,7 @@ function PasswordReset() {
     const graduationYear = convertToGraduationYear(academicYear, classSel);
     
     // Use the new endpoint that includes registration status
-    const response = await axios.get('http://localhost:4000/admin/students-with-status', {
+    const response = await axios.get('https://feedback-mlan.onrender.com/admin/students-with-status', {
       params: {
         class: classSel,
         branch: branchSel,
@@ -74,7 +74,7 @@ function PasswordReset() {
     try {
       const graduationYear = convertToGraduationYear(academicYear, classSel);
       
-      const response = await axios.put(`http://localhost:4000/admin/reset-student/${student.hallticket}`, {
+      const response = await axios.put(`https://feedback-mlan.onrender.com/admin/reset-student/${student.hallticket}`, {
         academicYear: graduationYear
       });
       
