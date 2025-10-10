@@ -143,7 +143,7 @@ function App() {
     formData.append("academicYear", graduationYear);
     
     try {
-      await axios.post("http://localhost:4000/upload-students", formData);
+      await axios.post("https://feedback-mlan.onrender.com/upload-students", formData);
       toast.success("Students uploaded successfully!");
       loadFeedbackCounts();
     } catch (error) {
@@ -171,7 +171,7 @@ function App() {
     formData.append("academicYear", graduationYear);
     
     try {
-      await axios.post("http://localhost:4000/upload-subjects", formData);
+      await axios.post("https://feedback-mlan.onrender.com/upload-subjects", formData);
       toast.success("Subjects and faculties uploaded successfully!");
       loadFacultyList();
       
@@ -202,7 +202,7 @@ function App() {
     try {
       const graduationYear = convertToGraduationYear(academicYear, classSel);
       
-      const res = await axios.get(`http://localhost:4000/feedback-counts?class=${classSel}&branch=${branchSel}&academicYear=${graduationYear}`);
+      const res = await axios.get(`https://feedback-mlan.onrender.com/feedback-counts?class=${classSel}&branch=${branchSel}&academicYear=${graduationYear}`);
       setFeedbackCounts(res.data);
     } catch (error) {
       console.error("Failed to load feedback counts:", error);
@@ -214,7 +214,7 @@ function App() {
     try {
       const graduationYear = convertToGraduationYear(academicYear, classSel);
       
-      const res = await axios.get(`http://localhost:4000/round-status?class=${classSel}&branch=${branchSel}&academicYear=${graduationYear}`);
+      const res = await axios.get(`https://feedback-mlan.onrender.com/round-status?class=${classSel}&branch=${branchSel}&academicYear=${graduationYear}`);
       setRoundStatus(res.data);
     } catch (error) {
       console.error("Failed to load round status:", error);
@@ -226,7 +226,7 @@ function App() {
     try {
       const graduationYear = convertToGraduationYear(academicYear, classSel);
       
-      const res = await axios.post(`http://localhost:4000/round-control`, {
+      const res = await axios.post(`https://feedback-mlan.onrender.com/round-control`, {
         class: classSel,
         branch: branchSel,
         academicYear: graduationYear,
@@ -257,7 +257,7 @@ function App() {
     try {
       const graduationYear = convertToGraduationYear(academicYear, classSel);
       
-      const res = await axios.get(`http://localhost:4000/full-performance/${facultyToUse}`, {
+      const res = await axios.get(`https://feedback-mlan.onrender.com/full-performance/${facultyToUse}`, {
         params: { 
           class: classSel, 
           branch: branchSel, 
@@ -293,7 +293,7 @@ function App() {
     try {
       const graduationYear = convertToGraduationYear(academicYear, classSel);
       
-      const res = await axios.get(`http://localhost:4000/full-performance/${selectedFaculty}`, {
+      const res = await axios.get(`https://feedback-mlan.onrender.com/full-performance/${selectedFaculty}`, {
         params: { 
           class: classSel, 
           branch: branchSel, 
@@ -324,7 +324,7 @@ function App() {
     try {
       const graduationYear = convertToGraduationYear(academicYear, classSel);
       
-      const res = await axios.get(`http://localhost:4000/class-report`, {
+      const res = await axios.get(`https://feedback-mlan.onrender.com/class-report`, {
         params: { 
           class: classSel, 
           branch: branchSel, 
@@ -347,7 +347,7 @@ function App() {
     try {
       const graduationYear = convertToGraduationYear(academicYear, classSel);
       
-      const res = await axios.get(`http://localhost:4000/department-report`, {
+      const res = await axios.get(`https://feedback-mlan.onrender.com/department-report`, {
         params: { 
           branch: branchSel, 
           academicYear: graduationYear,
