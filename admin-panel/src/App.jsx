@@ -3,7 +3,9 @@ import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { Pie, Bar } from "react-chartjs-2";
-
+import FeedbackSubmissionTracker from './FeedbackSubmissionTracker';
+import PasswordReset from './PasswordReset';
+import AdminLogin from './AdminLogin';
 import './App.css'
 import {
   Chart as ChartJS,
@@ -17,7 +19,7 @@ import {
 } from "chart.js";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import reportLogo from './vamshi.PNG'; // Import the logo image
+import reportLogo from './vamshi.PNG';
 
 // Register ChartJS components
 ChartJS.register(
@@ -30,7 +32,10 @@ ChartJS.register(
   Title
 );
 
-function Admin() {
+function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [adminInfo, setAdminInfo] = useState(null);
+  const [currentView, setCurrentView] = useState('admin');
   const [studentsFile, setStudentsFile] = useState(null);
   const [subjectsFile, setSubjectsFile] = useState(null);
   const [classSel, setClassSel] = useState("");
@@ -59,17 +64,45 @@ function Admin() {
   const [classReportData, setClassReportData] = useState(null);
   const [departmentReportData, setDepartmentReportData] = useState(null);
 
-  
+  // Check if admin is already logged in on component mount
+  useEffect(() => {
+    const token = localStorage.getItem('adminToken');
+    const savedAdminInfo = localStorage.getItem('adminInfo');
+    
+    if (token && savedAdminInfo) {
+      setAdminInfo(JSON.parse(savedAdminInfo));
+      setIsAuthenticated(true);
+      
+      // Set authorization header for all requests
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    }
+  }, []);
+
+  const handleLogin = (admin) => {
+    setAdminInfo(admin);
+    setIsAuthenticated(true);
+    
+    // Set authorization header for all requests
+    axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem('adminToken')}`;
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminInfo');
+    setIsAuthenticated(false);
+    setAdminInfo(null);
+    delete axios.defaults.headers.common['Authorization'];
+    toast.info('Logged out successfully');
+  };
+
   // Function to convert academic year to graduation year format for database
   const convertToGraduationYear = (academicYear, classSel) => {
     if (!academicYear) return "";
     
-    // Extract the start year from academic year (e.g., "2025-2026" -> 2025)
     const startYear = parseInt(academicYear.split('-')[0]);
     
-    // Calculate graduation year based on class
     if (classSel) {
-      const yearPart = classSel.split('-')[0]; // Get the year part (1, 2, 3, or 4)
+      const yearPart = classSel.split('-')[0];
       const yearNumber = parseInt(yearPart);
       
       if (!isNaN(yearNumber)) {
@@ -78,7 +111,6 @@ function Admin() {
       }
     }
     
-    // Default fallback (for department reports where class is not selected)
     return `${startYear}-${startYear + 4}`;
   };
 
@@ -102,7 +134,6 @@ function Admin() {
       return;
     }
     
-    // Convert academic year to graduation year format for database
     const graduationYear = convertToGraduationYear(academicYear, classSel);
     
     const formData = new FormData();
@@ -131,7 +162,6 @@ function Admin() {
       return;
     }
     
-    // Convert academic year to graduation year format for database
     const graduationYear = convertToGraduationYear(academicYear, classSel);
     
     const formData = new FormData();
@@ -145,7 +175,6 @@ function Admin() {
       toast.success("Subjects and faculties uploaded successfully!");
       loadFacultyList();
       
-      // Enable initial round by default when subjects are uploaded
       enableRound('initial', true);
     } catch (error) {
       toast.error("Failed to upload subjects: " + error.message);
@@ -158,7 +187,6 @@ function Admin() {
       return;
     }
     
-    // Convert academic year to graduation year format for database
     const graduationYear = convertToGraduationYear(academicYear, classSel);
     
     try {
@@ -172,7 +200,6 @@ function Admin() {
   // Load feedback submission counts for both rounds
   const loadFeedbackCounts = async () => {
     try {
-      // Convert academic year to graduation year format for database
       const graduationYear = convertToGraduationYear(academicYear, classSel);
       
       const res = await axios.get(`http://localhost:4000/feedback-counts?class=${classSel}&branch=${branchSel}&academicYear=${graduationYear}`);
@@ -185,7 +212,6 @@ function Admin() {
   // Load round status
   const loadRoundStatus = async () => {
     try {
-      // Convert academic year to graduation year format for database
       const graduationYear = convertToGraduationYear(academicYear, classSel);
       
       const res = await axios.get(`http://localhost:4000/round-status?class=${classSel}&branch=${branchSel}&academicYear=${graduationYear}`);
@@ -198,7 +224,6 @@ function Admin() {
   // Enable/disable rounds
   const enableRound = async (round, enabled) => {
     try {
-      // Convert academic year to graduation year format for database
       const graduationYear = convertToGraduationYear(academicYear, classSel);
       
       const res = await axios.post(`http://localhost:4000/round-control`, {
@@ -230,7 +255,6 @@ function Admin() {
     const facultyToUse = facultyName || selectedFaculty;
     
     try {
-      // Convert academic year to graduation year format for database
       const graduationYear = convertToGraduationYear(academicYear, classSel);
       
       const res = await axios.get(`http://localhost:4000/full-performance/${facultyToUse}`, {
@@ -244,7 +268,6 @@ function Admin() {
       
       setPerformance(res.data);
       
-      // Calculate overall percentage for the faculty
       if (res.data.length > 0) {
         const percentages = calculateFacultyPercentage(res.data);
         setFacultyData({
@@ -268,7 +291,6 @@ function Admin() {
     }
     
     try {
-      // Convert academic year to graduation year format for database
       const graduationYear = convertToGraduationYear(academicYear, classSel);
       
       const res = await axios.get(`http://localhost:4000/full-performance/${selectedFaculty}`, {
@@ -282,7 +304,6 @@ function Admin() {
       
       setPerformance(res.data);
       
-      // Calculate overall percentage for the faculty
       if (res.data.length > 0) {
         const percentages = calculateFacultyPercentage(res.data);
         setFacultyData({
@@ -301,7 +322,6 @@ function Admin() {
   // Load class-wise report
   const loadClassReport = async (round = "initial") => {
     try {
-      // Convert academic year to graduation year format for database
       const graduationYear = convertToGraduationYear(academicYear, classSel);
       
       const res = await axios.get(`http://localhost:4000/class-report`, {
@@ -325,7 +345,6 @@ function Admin() {
   // Load department-wise report
   const loadDepartmentReport = async (round = "initial") => {
     try {
-      // Convert academic year to graduation year format for database
       const graduationYear = convertToGraduationYear(academicYear, classSel);
       
       const res = await axios.get(`http://localhost:4000/department-report`, {
@@ -362,10 +381,9 @@ function Admin() {
       });
     });
     
-    // Calculate average percentage for each question (out of 5)
     const result = {};
     Object.entries(percentages).forEach(([question, data]) => {
-      result[question] = (data.total / data.count) * 20; // Convert to percentage (5 = 100%)
+      result[question] = (data.total / data.count) * 20;
     });
     
     return result;
@@ -418,8 +436,8 @@ function Admin() {
           label: 'Performance Percentage',
           data: data,
           backgroundColor: 'rgba(54, 162, 235, 0.6)',
-      borderColor: 'rgba(54, 162, 235, 1)',
-      borderWidth: 1,
+          borderColor: 'rgba(54, 162, 235, 1)',
+          borderWidth: 1,
         },
       ],
     };
@@ -442,74 +460,7 @@ function Admin() {
     return `Performance Results for ${facultyData.name} - ${facultyData.round === 'initial' ? 'Initial' : 'Final'} Round`;
   };
 
-  // Download report as CSV
-  const downloadCSVReport = () => {
-    if (!facultyData && !classReportData && !departmentReportData) {
-      toast.error("No data to download!");
-      return;
-    }
-    
-    let csvContent = "";
-    
-    if (reportType === "faculty" && facultyData) {
-      csvContent = "Faculty Performance Report\n";
-      csvContent += `Faculty: ${facultyData.name}\n`;
-      csvContent += `Class: ${classSel}, Branch: ${branchSel}, Academic Year: ${academicYear}\n`;
-      csvContent += `Round: ${facultyData.round === 'initial' ? 'Initial' : 'Final'}\n`;
-      csvContent += `Students Submitted: ${facultyData.studentCount}\n`;
-      csvContent += `Overall Performance: ${getOverallPercentage()}%\n\n`;
-      csvContent += "Category,Percentage\n";
-      
-      Object.entries(facultyData.percentages).forEach(([category, percentage]) => {
-        csvContent += `${category},${percentage.toFixed(2)}%\n`;
-      });
-    } 
-    else if (reportType === "class" && classReportData) {
-      csvContent = "Class Performance Report\n";
-      csvContent += `Class: ${classSel}, Branch: ${branchSel}, Academic Year: ${academicYear}\n`;
-      csvContent += `Round: ${classReportData.round === 'initial' ? 'Initial' : 'Final'}\n\n`;
-      csvContent += "Subject,Faculty,Performance\n";
-      
-      classReportData.data.forEach(item => {
-        csvContent += `${item.subject},${item.faculty},${item.overallPercentage.toFixed(2)}%\n`;
-      });
-    }
-    else if (reportType === "department" && departmentReportData) {
-      csvContent = "Department Performance Report\n";
-      csvContent += `Branch: ${branchSel}, Academic Year: ${academicYear}\n`;
-      csvContent += `Round: ${departmentReportData.round === 'initial' ? 'Initial' : 'Final'}\n\n`;
-      csvContent += "Class,Average Performance\n";
-      
-      departmentReportData.data.forEach(item => {
-        csvContent += `${item.class},${item.overallPercentage.toFixed(2)}%\n`;
-      });
-    }
-    
-    // Create download link
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    
-    let filename = "";
-    if (reportType === "faculty") {
-      filename = `${facultyData.name}_${classSel}_${branchSel}_${academicYear}_${facultyData.round}_performance_report.csv`;
-    } else if (reportType === "class") {
-      filename = `${classSel}_${branchSel}_${academicYear}_${classReportData.round}_class_report.csv`;
-    } else if (reportType === "department") {
-      filename = `${branchSel}_${academicYear}_${departmentReportData.round}_department_report.csv`;
-    }
-    
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    toast.success("CSV report downloaded successfully!");
-  };
-
-  // Download report as PDF with proper letterhead and signature
+  // Download report as PDF
   const downloadPDFReport = () => {
     if (!facultyData && !classReportData && !departmentReportData) {
       toast.error("No data to download!");
@@ -517,45 +468,39 @@ function Admin() {
     }
 
     try {
-      // Create new PDF document
       const doc = new jsPDF();
       
-      // Add logo to the letterhead
       doc.addImage(reportLogo, 'PNG', 14, 10, 40, 40);
       
-      // Add text-based letterhead information
       doc.setFontSize(16);
       doc.setFont(undefined, 'bold');
-      doc.setTextColor(40, 40, 150); // Dark blue color
+      doc.setTextColor(40, 40, 150);
       doc.text("SCIENT INSTITUTE OF TECHNOLOGY", 105, 15, { align: "center" });
       
       doc.setFontSize(12);
-      doc.setTextColor(80, 80, 180); // Medium blue color
+      doc.setTextColor(80, 80, 180);
       doc.text("(UGC AUTONOMOUS)", 105, 22, { align: "center" });
       
       doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100); // Gray color
+      doc.setTextColor(100, 100, 100);
       doc.text("Accredited by NAAC with A+ Grade", 105, 29, { align: "center" });
       doc.text("Affiliated to JNTUH & Approved by AICTE", 105, 36, { align: "center" });
       doc.text("Ibrahimpatnam, Rangareddy, Telangana-501506", 105, 43, { align: "center" });
       doc.text("www.scient.ac.in | scient_insteng@yahoo.co.in", 105, 50, { align: "center" });
       
-      // Add a separator line
       doc.setDrawColor(40, 40, 150);
       doc.setLineWidth(0.8);
       doc.line(14, 55, 196, 55);
       
-      let startY = 65; // Starting Y position after letterhead
+      let startY = 65;
       
       if (reportType === "faculty" && facultyData) {
-        // Add title
         doc.setFontSize(16);
         doc.setTextColor(0, 0, 0);
         doc.setFont(undefined, 'bold');
         doc.text("FACULTY PERFORMANCE REPORT", 105, startY, { align: "center" });
         startY += 10;
         
-        // Add faculty details
         doc.setFontSize(12);
         doc.setFont(undefined, 'normal');
         doc.text(`Faculty Name: ${facultyData.name}`, 14, startY);
@@ -567,7 +512,6 @@ function Admin() {
         
         startY += 45;
         
-        // Add performance summary table
         autoTable(doc, {
           startY: startY,
           head: [['Evaluation Parameter', 'Performance (%)']],
@@ -586,52 +530,13 @@ function Admin() {
           }
         });
         
-        startY = doc.lastAutoTable.finalY + 10;
-        
-        // Add detailed results if there's space
-        if (startY < 250) {
-          doc.setFontSize(12);
-          doc.setFont(undefined, 'bold');
-          doc.text("Detailed Results by Subject", 14, startY);
-          startY += 7;
-          
-          const detailedData = facultyData.performance.map(subjectData => {
-            const row = [subjectData.subject];
-            Object.values(subjectData.avgScores).forEach(score => {
-              row.push(`${(score * 20).toFixed(2)}%`);
-            });
-            return row;
-          });
-          
-          autoTable(doc, {
-            startY: startY,
-            head: [['Subject', ...Object.keys(facultyData.percentages)]],
-            body: detailedData,
-            theme: 'grid',
-            headStyles: {
-              fillColor: [41, 128, 185],
-              textColor: 255,
-              fontStyle: 'bold'
-            },
-            alternateRowStyles: {
-              fillColor: [240, 240, 240]
-            },
-            styles: {
-              fontSize: 8,
-              cellPadding: 2
-            }
-          });
-        }
-      } 
-      else if (reportType === "class" && classReportData) {
-        // Add title
+      } else if (reportType === "class" && classReportData) {
         doc.setFontSize(16);
         doc.setTextColor(0, 0, 0);
         doc.setFont(undefined, 'bold');
         doc.text("CLASS PERFORMANCE REPORT", 105, startY, { align: "center" });
         startY += 10;
         
-        // Add class details
         doc.setFontSize(12);
         doc.setFont(undefined, 'normal');
         doc.text(`Class: ${classSel}, Branch: ${branchSel}`, 14, startY);
@@ -640,7 +545,6 @@ function Admin() {
         
         startY += 20;
         
-        // Add class performance table
         autoTable(doc, {
           startY: startY,
           head: [['Subject', 'Faculty', 'Performance (%)']],
@@ -659,16 +563,13 @@ function Admin() {
             fillColor: [240, 240, 240]
           }
         });
-      }
-      else if (reportType === "department" && departmentReportData) {
-        // Add title
+      } else if (reportType === "department" && departmentReportData) {
         doc.setFontSize(16);
         doc.setTextColor(0, 0, 0);
         doc.setFont(undefined, 'bold');
         doc.text("DEPARTMENT PERFORMANCE REPORT", 105, startY, { align: "center" });
         startY += 10;
         
-        // Add department details
         doc.setFontSize(12);
         doc.setFont(undefined, 'normal');
         doc.text(`Branch: ${branchSel}`, 14, startY);
@@ -677,7 +578,6 @@ function Admin() {
         
         startY += 20;
         
-        // Add department performance table
         autoTable(doc, {
           startY: startY,
           head: [['Class', 'Average Performance (%)']],
@@ -697,19 +597,16 @@ function Admin() {
         });
       }
       
-      // Add footer with date, time, and signature
       const now = new Date();
       const date = now.toLocaleDateString();
       const time = now.toLocaleTimeString();
       
       const finalY = doc.lastAutoTable.finalY + 20;
       
-      // Add date and time
       doc.setFontSize(10);
       doc.setTextColor(100, 100, 100);
       doc.text(`Report generated on: ${date} at ${time}`, 14, finalY);
       
-      // Add signature area
       doc.setFontSize(10);
       doc.setTextColor(0, 0, 0);
       doc.text("Principal's Signature:", 140, finalY);
@@ -717,7 +614,6 @@ function Admin() {
       doc.setLineWidth(0.5);
       doc.line(140, finalY + 5, 190, finalY + 5);
       
-      // Save the PDF
       let filename = "";
       if (reportType === "faculty") {
         filename = `${facultyData.name}_${classSel}_${branchSel}_${academicYear}_${facultyData.round}_performance_report.pdf`;
@@ -735,10 +631,19 @@ function Admin() {
     }
   };
 
-  return (
+  // Admin Panel Component
+  const AdminPanel = () => (
     <div className="admin-panel">
-      <ToastContainer />
-      <h2>Admin Panel - Feedback Management System</h2>
+      <div className="admin-header">
+        <div className="admin-welcome">
+          <h2>Admin Panel - Feedback Management System</h2>
+          <p>Welcome back, {adminInfo?.username}!</p>
+        </div>
+        <button onClick={handleLogout} className="logout-btn">
+          🚪 Logout
+        </button>
+      </div>
+      
       <div className="selection-section">
         <h3>Select Class, Branch and Academic Year</h3>
         <div className="selection-row">
@@ -814,10 +719,11 @@ function Admin() {
           </div>
         )}
       </div>
-          <div className="App">
-      <FeedbackSubmissionTracker />
-    </div>
- 
+      
+      <div className="App">
+        <FeedbackSubmissionTracker />
+      </div>
+
       {classSel && branchSel && academicYear && (
         <>
           <div className="upload-section">
@@ -1055,6 +961,49 @@ function Admin() {
       )}
     </div>
   );
+
+  // If not authenticated, show login page
+  if (!isAuthenticated) {
+    return <AdminLogin onLogin={handleLogin} />;
+  }
+
+  // If authenticated, show the main app
+  return (
+    <div className="App">
+      <ToastContainer />
+      
+      {/* Navigation Header */}
+      <div className="app-navigation">
+        <div className="nav-header">
+          <h1>Feedback Management System</h1>
+          <p>Welcome, {adminInfo?.username}</p>
+        </div>
+        <div className="nav-tabs">
+          <button 
+            className={`nav-tab ${currentView === 'admin' ? 'active' : ''}`}
+            onClick={() => setCurrentView('admin')}
+          >
+            📊 Admin Dashboard
+          </button>
+          <button 
+            className={`nav-tab ${currentView === 'password-reset' ? 'active' : ''}`}
+            onClick={() => setCurrentView('password-reset')}
+          >
+            🔑 Password Reset
+          </button>
+          <button onClick={handleLogout} className="logout-btn-nav">
+            🚪 Logout
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <main className="main-content">
+        {currentView === 'admin' && <AdminPanel />}
+        {currentView === 'password-reset' && <PasswordReset />}
+      </main>
+    </div>
+  );
 }
 
-export default Admin;
+export default App;

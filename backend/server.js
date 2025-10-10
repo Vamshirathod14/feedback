@@ -33,6 +33,18 @@ app.use(cors(corsOptions));
 // Handle preflight requests
 app.options('*', cors(corsOptions));
 // Models
+
+// Add this to your models section in server.js
+const AdminSchema = new mongoose.Schema({
+  username: { type: String, unique: true, required: true },
+  password: { type: String, required: true },
+  email: { type: String, unique: true },
+  role: { type: String, default: 'admin' },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const Admin = mongoose.model('Admin', AdminSchema);
+
 const StudentSchema = new mongoose.Schema({
   name: String,
   hallticket: { type: String, unique: true },
@@ -252,6 +264,121 @@ app.post('/upload-students', upload.single('file'), async (req, res) => {
     res.status(500).json({ error: 'Failed to upload students: ' + error.message });
   }
 });
+
+app.post('/admin/register', async (req, res) => {
+  try {
+    const { username, password, email } = req.body;
+    
+    if (!username || !password || !email) {
+      return res.status(400).json({ error: 'Username, password, and email are required' });
+    }
+    
+    // Check if admin already exists
+    const existingAdmin = await Admin.findOne({ 
+      $or: [{ username }, { email }] 
+    });
+    
+    if (existingAdmin) {
+      return res.status(400).json({ error: 'Admin username or email already exists' });
+    }
+    
+    // Create new admin
+    const admin = await Admin.create({
+      username,
+      password: bcrypt.hashSync(password, 10),
+      email
+    });
+    
+    res.json({ 
+      success: true, 
+      message: 'Admin registered successfully',
+      admin: {
+        id: admin._id,
+        username: admin.username,
+        email: admin.email,
+        role: admin.role
+      }
+    });
+  } catch (error) {
+    console.error('Admin registration error:', error);
+    res.status(500).json({ error: 'Failed to register admin' });
+  }
+});
+
+// Admin Login
+app.post('/admin/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password are required' });
+    }
+    
+    // Find admin by username
+    const admin = await Admin.findOne({ username });
+    if (!admin) {
+      return res.status(400).json({ error: 'Invalid credentials' });
+    }
+    
+    // Check password
+    if (!bcrypt.compareSync(password, admin.password)) {
+      return res.status(400).json({ error: 'Invalid credentials' });
+    }
+    
+    // Generate JWT token
+    const token = jwt.sign(
+      { 
+        id: admin._id,
+        username: admin.username,
+        email: admin.email,
+        role: admin.role
+      }, 
+      process.env.JWT_SECRET, 
+      { expiresIn: '24h' }
+    );
+    
+    res.json({ 
+      success: true, 
+      message: 'Login successful',
+      token,
+      admin: {
+        id: admin._id,
+        username: admin.username,
+        email: admin.email,
+        role: admin.role
+      }
+    });
+  } catch (error) {
+    console.error('Admin login error:', error);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// Admin verification middleware
+const authenticateAdmin = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, admin) => {
+    if (err) {
+      return res.status(403).json({ error: 'Invalid or expired token' });
+    }
+    
+    // Check if the token belongs to an admin
+    if (admin.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
+    }
+    
+    req.admin = admin;
+    next();
+  });
+};
+
+
 
 // Admin: Upload subjects CSV
 app.post('/upload-subjects', upload.single('file'), async (req, res) => {
@@ -1022,6 +1149,79 @@ app.get('/admin/students', async (req, res) => {
   } catch (error) {
     console.error('Failed to fetch students:', error);
     res.status(500).json({ error: 'Failed to fetch students' });
+  }
+});
+// Get all students for a class, branch, and academic year WITH registration status
+app.get('/admin/students-with-status', async (req, res) => {
+  try {
+    const { class: cls, branch, academicYear } = req.query;
+    
+    if (!cls || !branch || !academicYear) {
+      return res.status(400).json({ error: 'Class, branch, and academic year are required' });
+    }
+    
+    const students = await Student.find({ 
+      branch: branch, 
+      academicYear: academicYear 
+    }).select('name hallticket branch academicYear email password -_id');
+    
+    // Add registration status
+    const studentsWithStatus = students.map(student => ({
+      name: student.name,
+      hallticket: student.hallticket,
+      branch: student.branch,
+      academicYear: student.academicYear,
+      registered: !!student.email, // true if email exists
+      email: student.email || null
+    }));
+    
+    res.json(studentsWithStatus);
+  } catch (error) {
+    console.error('Failed to fetch students:', error);
+    res.status(500).json({ error: 'Failed to fetch students' });
+  }
+});
+// Admin: Reset student password (clear email and password)
+app.put('/admin/reset-student/:hallticket', async (req, res) => {
+  try {
+    const { hallticket } = req.params;
+    const { academicYear } = req.body;
+    
+    if (!hallticket || !academicYear) {
+      return res.status(400).json({ error: 'Hallticket and academic year are required' });
+    }
+    
+    const student = await Student.findOne({ 
+      hallticket: hallticket,
+      academicYear: academicYear 
+    });
+    
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+    
+    if (!student.email) {
+      return res.status(400).json({ error: 'Student is not registered yet' });
+    }
+    
+    // Clear email and password fields
+    student.email = undefined;
+    student.password = undefined;
+    await student.save();
+    
+    res.json({ 
+      success: true, 
+      message: 'Password reset successfully. Student can now register again.',
+      student: {
+        name: student.name,
+        hallticket: student.hallticket,
+        branch: student.branch,
+        academicYear: student.academicYear
+      }
+    });
+  } catch (error) {
+    console.error('Error resetting student password:', error);
+    res.status(500).json({ error: 'Failed to reset password: ' + error.message });
   }
 });
 
