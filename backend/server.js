@@ -511,6 +511,200 @@ app.get('/faculty-history', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch faculty history' });
   }
 });
+// Faculty Name Correction Endpoints
+
+// Get preview of faculty name changes
+app.get('/faculty-preview', async (req, res) => {
+  try {
+    const { originalName, newName } = req.query;
+    
+    if (!originalName || !newName) {
+      return res.status(400).json({ error: 'Original name and new name are required' });
+    }
+
+    // Count affected records
+    const subjectsCount = await Subject.countDocuments({ faculty: originalName });
+    const feedbacksCount = await Feedback.countDocuments({ faculty: originalName });
+    
+    res.json({
+      originalName,
+      newName,
+      subjectsCount,
+      feedbacksCount,
+      performanceCount: feedbacksCount
+    });
+  } catch (error) {
+    console.error('Failed to get preview:', error);
+    res.status(500).json({ error: 'Failed to get preview' });
+  }
+});
+
+// Correct faculty name across all collections
+app.post('/correct-faculty-name', async (req, res) => {
+  try {
+    const { originalName, newName } = req.body;
+    
+    if (!originalName || !newName) {
+      return res.status(400).json({ error: 'Original name and new name are required' });
+    }
+
+    if (originalName === newName) {
+      return res.status(400).json({ error: 'Original and new names are the same' });
+    }
+
+    console.log(`Renaming faculty: "${originalName}" -> "${newName}"`);
+
+    // Update in subjects collection
+    const subjectsResult = await Subject.updateMany(
+      { faculty: originalName },
+      { $set: { faculty: newName } }
+    );
+
+    // Update in feedbacks collection
+    const feedbacksResult = await Feedback.updateMany(
+      { faculty: originalName },
+      { $set: { faculty: newName } }
+    );
+
+    console.log(`Update results - Subjects: ${subjectsResult.modifiedCount}, Feedbacks: ${feedbacksResult.modifiedCount}`);
+
+    res.json({
+      success: true,
+      message: `Successfully renamed "${originalName}" to "${newName}"`,
+      results: {
+        subjectsModified: subjectsResult.modifiedCount,
+        feedbacksModified: feedbacksResult.modifiedCount,
+        totalModified: subjectsResult.modifiedCount + feedbacksResult.modifiedCount
+      }
+    });
+  } catch (error) {
+    console.error('Error correcting faculty name:', error);
+    res.status(500).json({ error: 'Failed to correct faculty name: ' + error.message });
+  }
+});
+
+// Get faculty variations for grouping
+app.get('/faculty-variations', async (req, res) => {
+  try {
+    const faculties = await Subject.distinct('faculty');
+    
+    // Group similar faculty names
+    const groups = {};
+    
+    faculties.forEach(faculty => {
+      // Create normalized key by removing spaces, dots, and converting to lowercase
+      const normalized = faculty
+        .toLowerCase()
+        .replace(/[.\s]/g, '')
+        .replace(/[^a-z0-9]/g, '')
+        .trim();
+      
+      if (!groups[normalized]) {
+        groups[normalized] = [];
+      }
+      
+      // Only add if not already in the group
+      if (!groups[normalized].some(f => f.toLowerCase() === faculty.toLowerCase())) {
+        groups[normalized].push(faculty);
+      }
+    });
+    
+    // Filter groups that have multiple variations and get counts
+    const variationsWithCounts = await Promise.all(
+      Object.entries(groups)
+        .filter(([key, variations]) => variations.length > 1)
+        .map(async ([key, variations]) => {
+          const counts = await Promise.all(
+            variations.map(async (faculty) => {
+              const subjectsCount = await Subject.countDocuments({ faculty });
+              const feedbacksCount = await Feedback.countDocuments({ faculty });
+              return {
+                name: faculty,
+                subjectsCount,
+                feedbacksCount,
+                totalCount: subjectsCount + feedbacksCount
+              };
+            })
+          );
+          
+          return {
+            key,
+            variations: counts.sort((a, b) => b.totalCount - a.totalCount), // Sort by most used
+            totalRecords: counts.reduce((sum, item) => sum + item.totalCount, 0)
+          };
+        })
+    );
+    
+    res.json(variationsWithCounts);
+  } catch (error) {
+    console.error('Failed to fetch faculty variations:', error);
+    res.status(500).json({ error: 'Failed to fetch faculty variations' });
+  }
+});
+
+// Get faculty statistics
+app.get('/faculty-stats', async (req, res) => {
+  try {
+    const totalFaculties = await Subject.distinct('faculty');
+    const totalSubjects = await Subject.countDocuments();
+    const totalFeedbacks = await Feedback.countDocuments();
+    
+    // Get faculties with their record counts
+    const facultyStats = await Subject.aggregate([
+      {
+        $group: {
+          _id: '$faculty',
+          subjectsCount: { $sum: 1 },
+          uniqueClasses: { $addToSet: '$class' },
+          uniqueBranches: { $addToSet: '$branch' }
+        }
+      },
+      {
+        $lookup: {
+          from: 'feedbacks',
+          localField: '_id',
+          foreignField: 'faculty',
+          as: 'feedbackData'
+        }
+      },
+      {
+        $project: {
+          name: '$_id',
+          subjectsCount: 1,
+          classesCount: { $size: '$uniqueClasses' },
+          branchesCount: { $size: '$uniqueBranches' },
+          feedbacksCount: { $size: '$feedbackData' },
+          totalRecords: { $add: ['$subjectsCount', { $size: '$feedbackData' }] }
+        }
+      },
+      { $sort: { totalRecords: -1 } }
+    ]);
+
+    res.json({
+      totalFaculties: totalFaculties.length,
+      totalSubjects,
+      totalFeedbacks,
+      facultyStats
+    });
+  } catch (error) {
+    console.error('Failed to get faculty stats:', error);
+    res.status(500).json({ error: 'Failed to get faculty statistics' });
+  }
+});
+
+// Test endpoint for faculty corrections
+app.get('/test-faculty-endpoints', (req, res) => {
+  res.json({ 
+    message: 'Faculty correction endpoints are working!',
+    endpoints: [
+      '/all-faculties',
+      '/faculty-variations', 
+      '/faculty-preview',
+      '/correct-faculty-name'
+    ],
+    timestamp: new Date().toISOString()
+  });
+});
 
 
 // Admin: Upload subjects CSV

@@ -7,6 +7,7 @@ import FeedbackSubmissionTracker from './FeedbackSubmissionTracker';
 import PasswordReset from './PasswordReset';
 import AdminLogin from './AdminLogin';
 import FacultyTrackingPage from './FacultyTrackingPage';
+import FacultyNameCorrection from "./FacultyNameCorrection";
 import './App.css'
 import {
   Chart as ChartJS,
@@ -998,6 +999,13 @@ function App() {
           >
             🔑 Password Reset
           </button>
+
+          <button 
+  className={`nav-tab ${currentView === 'faculty-correction' ? 'active' : ''}`}
+  onClick={() => setCurrentView('faculty-correction')}
+>
+  🔧 Faculty Name Correction
+</button>
           <button onClick={handleLogout} className="logout-btn-nav">
             🚪 Logout
           </button>
@@ -1010,6 +1018,7 @@ function App() {
         {currentView === 'admin' && <AdminPanel />}
         {currentView === 'password-reset' && <PasswordReset />}
         {currentView === 'faculty-tracking' && <FacultyTrackingPage />}
+        {currentView === 'faculty-correction' && <FacultyNameCorrection />}
 
       </main>
     </div>
