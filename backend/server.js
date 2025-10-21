@@ -378,6 +378,139 @@ const authenticateAdmin = (req, res, next) => {
   });
 };
 
+// Get all unique faculties across all classes and branches
+app.get('/all-faculties', async (req, res) => {
+  try {
+    const faculties = await Subject.distinct('faculty');
+    res.json(faculties.sort());
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch faculties' });
+  }
+});
+
+// Get complete faculty history with performance data
+// Enhanced faculty history endpoint with better performance data
+app.get('/faculty-history', async (req, res) => {
+  try {
+    const { faculty, class: cls, branch, academicYear } = req.query;
+    
+    if (!faculty) {
+      return res.status(400).json({ error: 'Faculty name is required' });
+    }
+    
+    // Build match criteria for subjects
+    const subjectMatchCriteria = { faculty };
+    if (cls) subjectMatchCriteria.class = cls;
+    if (branch) subjectMatchCriteria.branch = branch;
+    if (academicYear) subjectMatchCriteria.academicYear = academicYear;
+    
+    // Get all subjects taught by the faculty
+    const subjects = await Subject.find(subjectMatchCriteria);
+    
+    if (subjects.length === 0) {
+      return res.json([]);
+    }
+    
+    // Get detailed performance data for each subject
+    const facultyHistory = await Promise.all(
+      subjects.map(async (subject) => {
+        try {
+          // Get performance data for the subject
+          const performanceData = await Feedback.aggregate([
+            {
+              $match: {
+                faculty: subject.faculty,
+                subject: subject.subject,
+                class: subject.class,
+                branch: subject.branch,
+                academicYear: subject.academicYear
+              }
+            },
+            {
+              $unwind: "$answers"
+            },
+            {
+              $group: {
+                _id: {
+                  round: "$round",
+                  subject: "$subject"
+                },
+                totalScore: { $sum: "$answers.score" },
+                totalResponses: { $sum: 1 },
+                studentCount: { $addToSet: "$hallticket" },
+                suggestions: { $push: "$suggestion" }
+              }
+            },
+            {
+              $project: {
+                round: "$_id.round",
+                subject: "$_id.subject",
+                avgScore: { $divide: ["$totalScore", "$totalResponses"] },
+                studentCount: { $size: "$studentCount" },
+                totalSuggestions: { 
+                  $size: { 
+                    $filter: { 
+                      input: "$suggestions", 
+                      as: "suggestion",
+                      cond: { $ne: ["$$suggestion", ""] }
+                    } 
+                  } 
+                }
+              }
+            }
+          ]);
+          
+          // Calculate performance percentages
+          const roundsData = {};
+          performanceData.forEach(data => {
+            const percentage = (data.avgScore / 5) * 100;
+            roundsData[data.round] = {
+              overallPercentage: percentage,
+              studentCount: data.studentCount,
+              totalSuggestions: data.totalSuggestions
+            };
+          });
+          
+          // Determine if subject involves labs (you might need to adjust this logic)
+          const isLabSubject = subject.subject.toLowerCase().includes('lab') || 
+                              subject.subject.toLowerCase().includes('laboratory');
+          
+          return {
+            faculty: subject.faculty,
+            subject: subject.subject,
+            class: subject.class,
+            branch: subject.branch,
+            academicYear: subject.academicYear,
+            rounds: roundsData,
+            overallPercentage: roundsData.initial?.overallPercentage || roundsData.final?.overallPercentage || 0,
+            studentCount: roundsData.initial?.studentCount || roundsData.final?.studentCount || 0,
+            round: roundsData.initial ? 'initial' : (roundsData.final ? 'final' : 'no-data'),
+            labs: isLabSubject ? [subject.subject] : [],
+            subjectsHandled: [subject.subject],
+            totalSuggestions: roundsData.initial?.totalSuggestions || roundsData.final?.totalSuggestions || 0
+          };
+        } catch (error) {
+          console.error(`Error processing subject ${subject.subject}:`, error);
+          return null;
+        }
+      })
+    );
+    
+    // Filter out null results and sort by academic year and class
+    const validHistory = facultyHistory.filter(record => record !== null);
+    validHistory.sort((a, b) => {
+      if (a.academicYear !== b.academicYear) {
+        return b.academicYear.localeCompare(a.academicYear);
+      }
+      return a.class.localeCompare(b.class);
+    });
+    
+    res.json(validHistory);
+  } catch (error) {
+    console.error('Failed to fetch faculty history:', error);
+    res.status(500).json({ error: 'Failed to fetch faculty history' });
+  }
+});
 
 
 // Admin: Upload subjects CSV

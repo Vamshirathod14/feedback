@@ -1,0 +1,475 @@
+.faculty-tracking-page {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  text-align: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #e1e5e9;
+}
+
+.page-header h1 {
+  color: #2c3e50;
+  margin-bottom: 10px;
+  font-size: 2.2em;
+}
+
+.page-header p {
+  color: #7f8c8d;
+  font-size: 1.1em;
+}
+
+/* Filters Section */
+.filters-section {
+  background: white;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin-bottom: 25px;
+}
+
+.filter-group {
+  margin-bottom: 15px;
+}
+
+.filter-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.faculty-select,
+.filter-group select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid #bdc3c7;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+.faculty-select:focus,
+.filter-group select:focus {
+  outline: none;
+  border-color: #3498db;
+}
+
+.filter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  align-items: end;
+}
+
+.clear-filters-btn {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s ease;
+}
+
+.clear-filters-btn:hover {
+  background: #c0392b;
+}
+
+/* Faculty Summary */
+.faculty-summary {
+  background: white;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin-bottom: 25px;
+}
+
+.faculty-summary h2 {
+  color: #2c3e50;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #3498db;
+  padding-bottom: 10px;
+}
+
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.summary-card {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  border-left: 4px solid #3498db;
+  text-align: center;
+}
+
+.summary-card h3 {
+  color: #7f8c8d;
+  font-size: 14px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.summary-card .count {
+  font-size: 2.5em;
+  font-weight: bold;
+  color: #2c3e50;
+  margin-bottom: 5px;
+}
+
+.summary-card .performance-score {
+  font-size: 2.5em;
+  font-weight: bold;
+  color: #27ae60;
+  margin-bottom: 5px;
+}
+
+.subjects-list,
+.departments-list,
+.records-info {
+  font-size: 12px;
+  color: #7f8c8d;
+  margin-top: 5px;
+}
+
+/* Performance by Class */
+.performance-by-class {
+  background: white;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin-bottom: 25px;
+}
+
+.performance-by-class h3 {
+  color: #2c3e50;
+  margin-bottom: 20px;
+}
+
+.class-performance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.class-performance-card {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid #e1e5e9;
+}
+
+.class-name {
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 8px;
+}
+
+.class-performance {
+  font-size: 1.5em;
+  font-weight: bold;
+  color: #27ae60;
+  margin-bottom: 10px;
+}
+
+.performance-bar {
+  background: #ecf0f1;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.performance-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #27ae60, #2ecc71);
+  transition: width 0.3s ease;
+}
+
+/* History Section */
+.history-section {
+  background: white;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.section-header h3 {
+  color: #2c3e50;
+  margin: 0;
+}
+
+.refresh-btn {
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s ease;
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background: #2980b9;
+}
+
+.refresh-btn:disabled {
+  background: #bdc3c7;
+  cursor: not-allowed;
+}
+
+/* Table Styles */
+.table-container {
+  overflow-x: auto;
+}
+
+.faculty-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.faculty-history-table th {
+  background: #34495e;
+  color: white;
+  padding: 12px 15px;
+  text-align: left;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.faculty-history-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.faculty-history-table tr.even {
+  background: #f8f9fa;
+}
+
+.faculty-history-table tr:hover {
+  background: #e3f2fd;
+}
+
+.subject-cell {
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.round-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.round-badge.initial {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.round-badge.final {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.performance-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.percentage {
+  font-weight: 600;
+  color: #2c3e50;
+  min-width: 60px;
+}
+
+.performance-bar-small {
+  flex: 1;
+  background: #ecf0f1;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  max-width: 100px;
+}
+
+.performance-fill-small {
+  height: 100%;
+  background: linear-gradient(90deg, #27ae60, #2ecc71);
+  transition: width 0.3s ease;
+}
+
+/* Loading and Placeholder */
+.loading,
+.no-data {
+  text-align: center;
+  padding: 40px;
+  color: #7f8c8d;
+  font-size: 16px;
+}
+
+.placeholder {
+  text-align: center;
+  padding: 60px 20px;
+  color: #7f8c8d;
+}
+
+.placeholder-icon {
+  font-size: 4em;
+  margin-bottom: 20px;
+}
+
+.placeholder h3 {
+  margin-bottom: 10px;
+  color: #2c3e50;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .faculty-tracking-page {
+    padding: 10px;
+  }
+  
+  .filter-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .summary-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .class-performance-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  
+  .performance-cell {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+  
+  .performance-bar-small {
+    max-width: 100%;
+  }
+}
+/* Report Buttons Section */
+.report-buttons-section {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin-bottom: 25px;
+}
+
+.report-buttons-section h3 {
+  color: #2c3e50;
+  margin-bottom: 15px;
+  border-bottom: 2px solid #3498db;
+  padding-bottom: 8px;
+}
+
+.report-buttons {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.report-btn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.report-btn.primary {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+}
+
+.report-btn.primary:hover {
+  background: linear-gradient(135deg, #2980b9, #21618c);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+.report-btn.secondary {
+  background: linear-gradient(135deg, #27ae60, #219a52);
+  color: white;
+}
+
+.report-btn.secondary:hover {
+  background: linear-gradient(135deg, #219a52, #1e8449);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+}
+
+.report-btn:disabled {
+  background: #bdc3c7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+/* Enhanced Table Styles */
+.faculty-history-table th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* Responsive Design for Report Buttons */
+@media (max-width: 768px) {
+  .report-buttons {
+    flex-direction: column;
+  }
+  
+  .report-btn {
+    justify-content: center;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .refresh-btn {
+    width: 100%;
+  }
+}

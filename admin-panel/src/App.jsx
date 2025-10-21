@@ -6,6 +6,7 @@ import { Pie, Bar } from "react-chartjs-2";
 import FeedbackSubmissionTracker from './FeedbackSubmissionTracker';
 import PasswordReset from './PasswordReset';
 import AdminLogin from './AdminLogin';
+import FacultyTrackingPage from './FacultyTrackingPage';
 import './App.css'
 import {
   Chart as ChartJS,
@@ -986,6 +987,12 @@ function App() {
             📊 Admin Dashboard
           </button>
           <button 
+  className={`nav-tab ${currentView === 'faculty-tracking' ? 'active' : ''}`}
+  onClick={() => setCurrentView('faculty-tracking')}
+>
+  👨‍🏫 Faculty Tracking
+</button>
+          <button 
             className={`nav-tab ${currentView === 'password-reset' ? 'active' : ''}`}
             onClick={() => setCurrentView('password-reset')}
           >
@@ -994,6 +1001,7 @@ function App() {
           <button onClick={handleLogout} className="logout-btn-nav">
             🚪 Logout
           </button>
+          
         </div>
       </div>
 
@@ -1001,6 +1009,8 @@ function App() {
       <main className="main-content">
         {currentView === 'admin' && <AdminPanel />}
         {currentView === 'password-reset' && <PasswordReset />}
+        {currentView === 'faculty-tracking' && <FacultyTrackingPage />}
+
       </main>
     </div>
   );
