@@ -960,3 +960,104 @@ body {
 .logout-btn-nav {
   margin-left: auto;
 }
+/* Add to your CSS */
+ /* File Input Styling */
+.file-input-container {
+  margin: 10px 0;
+  position: relative;
+}
+
+.file-input-container input[type="file"] {
+  position: absolute;
+  left: -9999px;
+  opacity: 0;
+}
+
+.file-input-label {
+  display: inline-block;
+  padding: 10px 15px;
+  background: #4CAF50;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s;
+  text-align: center;
+  width: 100%;
+}
+
+.file-input-label:hover {
+  background: #45a049;
+}
+
+.file-selected {
+  margin-top: 8px;
+  padding: 8px;
+  background: #e8f5e8;
+  border: 1px solid #4CAF50;
+  border-radius: 4px;
+  color: #2e7d32;
+  font-size: 14px;
+}
+
+/* Upload button loading state */
+button.loading {
+  background: #6c757d !important;
+  cursor: not-allowed;
+}
+
+/* Upload section styling */
+.upload-item {
+  border: 1px solid #ddd;
+  padding: 20px;
+  border-radius: 8px;
+  background: #f9f9f9;
+  margin: 10px;
+  flex: 1;
+  min-width: 300px;
+}
+
+.upload-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.upload-item h4 {
+  margin-top: 0;
+  color: #333;
+  border-bottom: 2px solid #4CAF50;
+  padding-bottom: 8px;
+}
+
+.upload-item button {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background 0.3s;
+}
+
+.upload-item button:hover:not(:disabled) {
+  background: #1976D2;
+}
+
+.upload-item button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.upload-item p {
+  margin: 5px 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.upload-item .note {
+  color: #ff9800;
+  font-style: italic;
+}

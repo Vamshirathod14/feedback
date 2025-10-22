@@ -6,144 +6,135 @@ import './FacultyNameCorrection.css';
 const FacultyNameCorrection = () => {
   const [faculties, setFaculties] = useState([]);
   const [groupedFaculties, setGroupedFaculties] = useState([]);
-  const [selectedGroup, setSelectedGroup] = useState('');
+  const [selectedFaculty, setSelectedFaculty] = useState('');
   const [correctName, setCorrectName] = useState('');
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(null);
-  const [endpointsAvailable, setEndpointsAvailable] = useState({
-    variations: false,
-    preview: false,
-    correction: false
-  });
+  const [classFilter, setClassFilter] = useState('');
+  const [branchFilter, setBranchFilter] = useState('');
+  const [academicYearFilter, setAcademicYearFilter] = useState('');
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://feedback-mlan.onrender.com';
+  const classes = ["1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"];
+  const branches = ["CSE-A", "CSE-B", "CSE-C", "CSE-D", "CSM", "AIML", "ECE", "EEE", "CSE-E"];
+  const academicYears = ["2025-2026", "2026-2027", "2027-2028", "2028-2029"];
 
-  // Check which endpoints are available
-  const checkEndpoints = async () => {
-    try {
-      const testResponse = await axios.get(`${API_BASE_URL}/test-faculty-endpoints`);
-      console.log('Endpoints test:', testResponse.data);
-      setEndpointsAvailable({
-        variations: true,
-        preview: true,
-        correction: true
-      });
-    } catch (error) {
-      console.log('Testing individual endpoints...');
-      
-      // Test each endpoint individually
-      const endpoints = {
-        variations: `${API_BASE_URL}/faculty-variations`,
-        preview: `${API_BASE_URL}/faculty-preview`,
-        correction: `${API_BASE_URL}/correct-faculty-name`
-      };
-
-      const results = await Promise.allSettled([
-        axios.get(endpoints.variations).then(() => true).catch(() => false),
-        axios.get(endpoints.preview + '?originalName=test&newName=test').then(() => true).catch(() => false),
-        axios.get(endpoints.correction).then(() => true).catch(() => false)
-      ]);
-
-      setEndpointsAvailable({
-        variations: results[0].value,
-        preview: results[1].value,
-        correction: results[2].value
-      });
-
-      console.log('Endpoint availability:', endpointsAvailable);
-    }
-  };
-
-  // Load all data
+  // Load all faculties
   useEffect(() => {
-    loadAllData();
+    loadAllFaculties();
   }, []);
 
-  const loadAllData = async () => {
+  const loadAllFaculties = async () => {
     try {
       setLoading(true);
-      await checkEndpoints();
+      const response = await axios.get('http://localhost:4000/all-faculties');
       
-      // Load basic faculties first
-      const facultiesResponse = await axios.get(`${API_BASE_URL}/all-faculties`);
-      setFaculties(facultiesResponse.data);
+      // Filter and sort faculties
+      const filteredFaculties = response.data
+        .filter(faculty => faculty && typeof faculty === 'string' && faculty.trim() !== '')
+        .sort((a, b) => a.localeCompare(b));
       
-      if (endpointsAvailable.variations) {
-        // Use the variations endpoint if available
-        const variationsResponse = await axios.get(`${API_BASE_URL}/faculty-variations`);
-        setGroupedFaculties(variationsResponse.data);
-      } else {
-        // Fallback: create basic grouping manually
-        console.log('Using manual faculty grouping');
-        groupFacultiesManually(facultiesResponse.data);
-      }
+      setFaculties(filteredFaculties);
+      
+      // Auto-group similar faculty names
+      groupSimilarFaculties(filteredFaculties);
       
     } catch (error) {
-      console.error('Failed to load data:', error);
+      console.error('Failed to load faculties:', error);
       toast.error('Failed to load faculty data');
     } finally {
       setLoading(false);
     }
   };
 
-  // Manual grouping if variations endpoint is not available
-  const groupFacultiesManually = (facultyList) => {
+  // Group similar faculty names
+  const groupSimilarFaculties = (facultyList) => {
     const groups = {};
     
     facultyList.forEach(faculty => {
+      if (!faculty || typeof faculty !== 'string') return;
+      
+      // Create a normalized key for grouping
       const normalized = faculty
         .toLowerCase()
-        .replace(/[.\s]/g, '')
-        .replace(/[^a-z0-9]/g, '')
+        .replace(/[.\s]/g, '') // Remove dots and spaces
+        .replace(/dr/g, '') // Remove titles
+        .replace(/prof/g, '')
         .trim();
       
       if (!groups[normalized]) {
         groups[normalized] = [];
       }
       
-      if (!groups[normalized].some(f => f.toLowerCase() === faculty.toLowerCase())) {
-        groups[normalized].push(faculty);
+      // Avoid duplicates in the same group
+      if (!groups[normalized].some(f => f.name === faculty)) {
+        groups[normalized].push({
+          name: faculty,
+          original: faculty
+        });
       }
     });
     
-    // Convert to array format and only keep groups with multiple variations
-    const variations = Object.entries(groups)
+    // Convert to array and filter groups with variations
+    const groupedArray = Object.entries(groups)
       .filter(([key, variations]) => variations.length > 1)
       .map(([key, variations]) => ({
         key,
-        variations: variations.map(name => ({ name, subjectsCount: '?', feedbacksCount: '?', totalCount: '?' })),
-        totalRecords: 0
+        variations: variations.sort((a, b) => a.name.localeCompare(b.name))
       }));
     
-    setGroupedFaculties(variations);
+    setGroupedFaculties(groupedArray);
   };
 
-  // Get preview of changes
+  // Get faculty details by class, branch, and academic year
+  const getFacultyDetails = async (facultyName) => {
+    try {
+      const params = {
+        faculty: facultyName
+      };
+      
+      if (classFilter) params.class = classFilter;
+      if (branchFilter) params.branch = branchFilter;
+      if (academicYearFilter) params.academicYear = academicYearFilter;
+
+      const response = await axios.get('http://localhost:4000/faculty-history', { params });
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching faculty details:', error);
+      return [];
+    }
+  };
+
+  // Preview changes
   const getPreview = async (originalName, newName) => {
     if (!originalName || !newName) {
       toast.error('Please select original faculty name and enter correct name');
       return;
     }
 
+    if (originalName === newName) {
+      toast.error('Original and new names are the same');
+      return;
+    }
+
     try {
-      if (endpointsAvailable.preview) {
-        const response = await axios.get(`${API_BASE_URL}/faculty-preview`, {
-          params: { originalName, newName }
-        });
-        setPreview(response.data);
-      } else {
-        // Fallback preview
-        setPreview({
-          originalName,
-          newName,
-          subjectsCount: 'Unknown (endpoint not available)',
-          feedbacksCount: 'Unknown (endpoint not available)',
-          performanceCount: 'Unknown (endpoint not available)'
-        });
-      }
+      setLoading(true);
+      
+      // Get current records for the original name
+      const originalRecords = await getFacultyDetails(originalName);
+      
+      setPreview({
+        originalName,
+        newName,
+        subjectsCount: originalRecords.length,
+        feedbacksCount: originalRecords.reduce((sum, record) => sum + (record.studentCount || 0), 0),
+        affectedRecords: originalRecords
+      });
+      
     } catch (error) {
       console.error('Failed to get preview:', error);
-      toast.error('Preview endpoint not available');
+      toast.error('Failed to get preview');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -154,6 +145,11 @@ const FacultyNameCorrection = () => {
       return;
     }
 
+    if (originalName === newName) {
+      toast.error('Original and new names are the same');
+      return;
+    }
+
     if (!window.confirm(`Are you sure you want to rename "${originalName}" to "${newName}"? This will affect all related records.`)) {
       return;
     }
@@ -161,29 +157,29 @@ const FacultyNameCorrection = () => {
     try {
       setLoading(true);
       
-      if (endpointsAvailable.correction) {
-        const response = await axios.post(`${API_BASE_URL}/correct-faculty-name`, {
-          originalName,
-          newName
-        });
-        toast.success(`Successfully renamed "${originalName}" to "${newName}"`);
-      } else {
-        // Fallback: show manual instructions
-        toast.info(`Faculty correction endpoint not available. You need to manually update in MongoDB:\n\nUpdate subjects: db.subjects.updateMany({faculty: "${originalName}"}, {$set: {faculty: "${newName}"}})\nUpdate feedbacks: db.feedbacks.updateMany({faculty: "${originalName}"}, {$set: {faculty: "${newName}"}})`);
-      }
-      
+      // Update subjects
+      await axios.put('http://localhost:4000/update-faculty-name', {
+        originalName,
+        newName,
+        class: classFilter,
+        branch: branchFilter,
+        academicYear: academicYearFilter
+      });
+
+      toast.success(`Successfully renamed "${originalName}" to "${newName}"`);
       setPreview(null);
       setCorrectName('');
-      setSelectedGroup('');
+      setSelectedFaculty('');
       
       // Reload data
-      loadAllData();
+      loadAllFaculties();
+      
     } catch (error) {
       console.error('Failed to correct faculty name:', error);
       if (error.response?.data?.error) {
         toast.error(`Failed: ${error.response.data.error}`);
       } else {
-        toast.error('Failed to correct faculty name. Endpoint may not be available.');
+        toast.error('Failed to correct faculty name');
       }
     } finally {
       setLoading(false);
@@ -194,6 +190,7 @@ const FacultyNameCorrection = () => {
   const suggestCorrectName = (variations) => {
     if (!variations || variations.length === 0) return '';
     
+    // Find the most complete version
     const sorted = [...variations].sort((a, b) => {
       const scoreA = getNameScore(a.name);
       const scoreB = getNameScore(b.name);
@@ -204,13 +201,23 @@ const FacultyNameCorrection = () => {
   };
 
   const getNameScore = (name) => {
+    if (!name) return 0;
+    
     let score = 0;
-    if (name.includes('.')) score += 2;
-    if (name === name.toUpperCase()) score -= 1;
-    if (name.match(/^[A-Z][a-z]+/)) score += 1;
-    if (name.includes('Dr.')) score += 3;
-    if (name.includes('Prof.')) score += 3;
+    if (name.includes('.')) score += 2; // Prefer names with dots
+    if (name === name.toUpperCase()) score -= 1; // Penalize all caps
+    if (name.match(/^[A-Z][a-z]+/)) score += 1; // Prefer proper case
+    if (name.includes('Dr.')) score += 3; // Prefer titles
+    if (name.includes('Prof.')) score += 3; // Prefer titles
+    if (name.length > 3) score += 1; // Prefer longer names
     return score;
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setClassFilter('');
+    setBranchFilter('');
+    setAcademicYearFilter('');
   };
 
   return (
@@ -218,18 +225,54 @@ const FacultyNameCorrection = () => {
       <div className="page-header">
         <h1>Faculty Name Correction</h1>
         <p>Fix spelling variations and merge duplicate faculty records</p>
-        
-        {/* Endpoint Status */}
-        <div className="endpoint-status">
-          <div className={`status-item ${endpointsAvailable.variations ? 'available' : 'unavailable'}`}>
-            Variations Endpoint: {endpointsAvailable.variations ? '✅ Available' : '❌ Not Available'}
+      </div>
+
+      {/* Filters */}
+      <div className="filters-section">
+        <h3>Filter by Class/Branch/Year</h3>
+        <div className="filter-row">
+          <div className="filter-group">
+            <label>Class:</label>
+            <select 
+              value={classFilter} 
+              onChange={(e) => setClassFilter(e.target.value)}
+            >
+              <option value="">All Classes</option>
+              {classes.map(cls => (
+                <option key={cls} value={cls}>{cls}</option>
+              ))}
+            </select>
           </div>
-          <div className={`status-item ${endpointsAvailable.preview ? 'available' : 'unavailable'}`}>
-            Preview Endpoint: {endpointsAvailable.preview ? '✅ Available' : '❌ Not Available'}
+
+          <div className="filter-group">
+            <label>Branch:</label>
+            <select 
+              value={branchFilter} 
+              onChange={(e) => setBranchFilter(e.target.value)}
+            >
+              <option value="">All Branches</option>
+              {branches.map(branch => (
+                <option key={branch} value={branch}>{branch}</option>
+              ))}
+            </select>
           </div>
-          <div className={`status-item ${endpointsAvailable.correction ? 'available' : 'unavailable'}`}>
-            Correction Endpoint: {endpointsAvailable.correction ? '✅ Available' : '❌ Not Available'}
+
+          <div className="filter-group">
+            <label>Academic Year:</label>
+            <select 
+              value={academicYearFilter} 
+              onChange={(e) => setAcademicYearFilter(e.target.value)}
+            >
+              <option value="">All Years</option>
+              {academicYears.map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
           </div>
+
+          <button onClick={clearFilters} className="clear-filters-btn">
+            Clear Filters
+          </button>
         </div>
       </div>
 
@@ -255,12 +298,6 @@ const FacultyNameCorrection = () => {
       <div className="faculty-groups">
         <h2>Faculty Name Variations</h2>
         
-        {!endpointsAvailable.variations && (
-          <div className="warning-banner">
-            ⚠️ Using manual grouping. For better results, add the faculty-variations endpoint to your server.
-          </div>
-        )}
-        
         {groupedFaculties.length === 0 && !loading && (
           <div className="no-variations">
             🎉 No name variations found! All faculty names are consistent.
@@ -278,11 +315,7 @@ const FacultyNameCorrection = () => {
               {group.variations.map((variation, idx) => (
                 <div key={idx} className="variation-item">
                   <span className="faculty-name">{variation.name}</span>
-                  {variation.subjectsCount !== '?' && (
-                    <span className="record-count">
-                      ({variation.subjectsCount} subjects, {variation.feedbacksCount} feedbacks)
-                    </span>
-                  )}
+                  <span className="variation-index">Variation {idx + 1}</span>
                 </div>
               ))}
             </div>
@@ -299,17 +332,15 @@ const FacultyNameCorrection = () => {
                 <input
                   type="text"
                   placeholder="Enter correct faculty name..."
-                  value={selectedGroup === group.key ? correctName : ''}
-                  onChange={(e) => {
-                    setCorrectName(e.target.value);
-                    setSelectedGroup(group.key);
-                  }}
+                  value={correctName}
+                  onChange={(e) => setCorrectName(e.target.value)}
                   className="name-input"
                 />
                 
                 <button
                   onClick={() => getPreview(group.variations[0].name, correctName || suggestCorrectName(group.variations))}
                   className="preview-btn"
+                  disabled={!correctName && group.variations.length === 0}
                 >
                   Preview Changes
                 </button>
@@ -317,8 +348,9 @@ const FacultyNameCorrection = () => {
                 <button
                   onClick={() => applyCorrection(group.variations[0].name, correctName || suggestCorrectName(group.variations))}
                   className="apply-btn"
+                  disabled={!correctName && group.variations.length === 0}
                 >
-                  {endpointsAvailable.correction ? 'Apply Correction' : 'Show Manual Instructions'}
+                  Apply Correction
                 </button>
               </div>
             </div>
@@ -349,17 +381,31 @@ const FacultyNameCorrection = () => {
               <div><strong>Changing:</strong> "{preview.originalName}" → "{preview.newName}"</div>
               <div><strong>Subjects affected:</strong> {preview.subjectsCount}</div>
               <div><strong>Feedback records affected:</strong> {preview.feedbacksCount}</div>
-              {preview.subjectsCount !== 'Unknown (endpoint not available)' && (
-                <div><strong>Total records to update:</strong> {preview.subjectsCount + preview.feedbacksCount}</div>
-              )}
+              <div><strong>Total records to update:</strong> {preview.subjectsCount + preview.feedbacksCount}</div>
             </div>
+            
+            {preview.affectedRecords && preview.affectedRecords.length > 0 && (
+              <div className="affected-records">
+                <h4>Affected Records:</h4>
+                <div className="records-list">
+                  {preview.affectedRecords.slice(0, 5).map((record, idx) => (
+                    <div key={idx} className="record-item">
+                      {record.class} - {record.branch} - {record.subject}
+                    </div>
+                  ))}
+                  {preview.affectedRecords.length > 5 && (
+                    <div className="more-records">... and {preview.affectedRecords.length - 5} more</div>
+                  )}
+                </div>
+              </div>
+            )}
             
             <div className="preview-actions">
               <button
                 onClick={() => applyCorrection(preview.originalName, preview.newName)}
                 className="confirm-btn"
               >
-                {endpointsAvailable.correction ? 'Confirm Changes' : 'Show Manual Instructions'}
+                Confirm Changes
               </button>
               <button
                 onClick={() => setPreview(null)}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -37,6 +37,9 @@ ChartJS.register(
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [adminInfo, setAdminInfo] = useState(null);
+  const [studentsFileName, setStudentsFileName] = useState("");
+const [subjectsFileName, setSubjectsFileName] = useState("");
+const [uploadLoading, setUploadLoading] = useState(false);
   const [currentView, setCurrentView] = useState('admin');
   const [studentsFile, setStudentsFile] = useState(null);
   const [subjectsFile, setSubjectsFile] = useState(null);
@@ -125,63 +128,117 @@ function App() {
     }
   }, [classSel, branchSel, academicYear]);
 
+
+const handleStudentsFileChange = (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    setStudentsFile(file);
+    setStudentsFileName(file.name);
+    toast.info(`Selected: ${file.name}`);
+  }
+};
+
+const handleSubjectsFileChange = (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    setSubjectsFile(file);
+    setSubjectsFileName(file.name);
+    toast.info(`Selected: ${file.name}`);
+  }
+};
+
   // Upload students csv
-  const uploadStudents = async () => {
-    if (!studentsFile) {
-      toast.error("Please select a file first!");
-      return;
-    }
-    if (!classSel || !branchSel || !academicYear) {
-      toast.error("Please select class, branch and academic year first!");
-      return;
-    }
+   const uploadStudents = async () => {
+  if (!studentsFile) {
+    toast.error("Please select a file first!");
+    return;
+  }
+  if (!classSel || !branchSel || !academicYear) {
+    toast.error("Please select class, branch and academic year first!");
+    return;
+  }
+  
+  setUploadLoading(true);
+  const graduationYear = convertToGraduationYear(academicYear, classSel);
+  
+  const formData = new FormData();
+  formData.append("file", studentsFile);
+  formData.append("class", classSel);
+  formData.append("branch", branchSel);
+  formData.append("academicYear", graduationYear);
+  
+  try {
+    const response = await axios.post("http://localhost:4000/upload-students", formData, {
+      onUploadProgress: (progressEvent) => {
+        const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        toast.info(`Uploading students... ${progress}%`);
+      }
+    });
     
-    const graduationYear = convertToGraduationYear(academicYear, classSel);
+    toast.success(`✅ ${response.data.message}`);
+    console.log('Upload response:', response.data);
     
-    const formData = new FormData();
-    formData.append("file", studentsFile);
-    formData.append("class", classSel);
-    formData.append("branch", branchSel);
-    formData.append("academicYear", graduationYear);
+    // Clear file after successful upload
+    setStudentsFile(null);
+    setStudentsFileName("");
+    document.querySelector('input[type="file"][accept=".csv"]').value = ""; // Clear file input
     
-    try {
-      await axios.post("https://feedback-mlan.onrender.com/upload-students", formData);
-      toast.success("Students uploaded successfully!");
-      loadFeedbackCounts();
-    } catch (error) {
-      toast.error("Failed to upload students: " + error.message);
-    }
-  };
+    loadFeedbackCounts();
+  } catch (error) {
+    console.error('Upload error:', error);
+    toast.error(`❌ Failed to upload students: ${error.response?.data?.error || error.message}`);
+  } finally {
+    setUploadLoading(false);
+  }
+};
+
 
   // Upload subjects+faculties csv
   const uploadSubjects = async () => {
-    if (!subjectsFile) {
-      toast.error("Please select a file first!");
-      return;
-    }
-    if (!classSel || !branchSel || !academicYear) {
-      toast.error("Please select class, branch and academic year first!");
-      return;
-    }
+  if (!subjectsFile) {
+    toast.error("Please select a file first!");
+    return;
+  }
+  if (!classSel || !branchSel || !academicYear) {
+    toast.error("Please select class, branch and academic year first!");
+    return;
+  }
+  
+  setUploadLoading(true);
+  const graduationYear = convertToGraduationYear(academicYear, classSel);
+  
+  const formData = new FormData();
+  formData.append("file", subjectsFile);
+  formData.append("class", classSel);
+  formData.append("branch", branchSel);
+  formData.append("academicYear", graduationYear);
+  
+  try {
+    const response = await axios.post("http://localhost:4000/upload-subjects", formData, {
+      onUploadProgress: (progressEvent) => {
+        const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        toast.info(`Uploading subjects... ${progress}%`);
+      }
+    });
     
-    const graduationYear = convertToGraduationYear(academicYear, classSel);
+    toast.success(`✅ ${response.data.message}`);
+    console.log('Upload response:', response.data);
     
-    const formData = new FormData();
-    formData.append("file", subjectsFile);
-    formData.append("class", classSel);
-    formData.append("branch", branchSel);
-    formData.append("academicYear", graduationYear);
+    // Clear file after successful upload
+    setSubjectsFile(null);
+    setSubjectsFileName("");
+    document.querySelectorAll('input[type="file"][accept=".csv"]')[1].value = ""; // Clear file input
     
-    try {
-      await axios.post("https://feedback-mlan.onrender.com/upload-subjects", formData);
-      toast.success("Subjects and faculties uploaded successfully!");
-      loadFacultyList();
-      
-      enableRound('initial', true);
-    } catch (error) {
-      toast.error("Failed to upload subjects: " + error.message);
-    }
-  };
+    loadFacultyList();
+    enableRound('initial', true);
+  } catch (error) {
+    console.error('Upload error:', error);
+    toast.error(`❌ Failed to upload subjects: ${error.response?.data?.error || error.message}`);
+  } finally {
+    setUploadLoading(false);
+  }
+};
+
 
   // Load list of all faculties
   const loadFacultyList = async () => {
@@ -204,7 +261,7 @@ function App() {
     try {
       const graduationYear = convertToGraduationYear(academicYear, classSel);
       
-      const res = await axios.get(`https://feedback-mlan.onrender.com/feedback-counts?class=${classSel}&branch=${branchSel}&academicYear=${graduationYear}`);
+      const res = await axios.get(`http://localhost:4000/feedback-counts?class=${classSel}&branch=${branchSel}&academicYear=${graduationYear}`);
       setFeedbackCounts(res.data);
     } catch (error) {
       console.error("Failed to load feedback counts:", error);
@@ -216,7 +273,7 @@ function App() {
     try {
       const graduationYear = convertToGraduationYear(academicYear, classSel);
       
-      const res = await axios.get(`https://feedback-mlan.onrender.com/round-status?class=${classSel}&branch=${branchSel}&academicYear=${graduationYear}`);
+      const res = await axios.get(`http://localhost:4000/round-status?class=${classSel}&branch=${branchSel}&academicYear=${graduationYear}`);
       setRoundStatus(res.data);
     } catch (error) {
       console.error("Failed to load round status:", error);
@@ -228,7 +285,7 @@ function App() {
     try {
       const graduationYear = convertToGraduationYear(academicYear, classSel);
       
-      const res = await axios.post(`https://feedback-mlan.onrender.com/round-control`, {
+      const res = await axios.post(`http://localhost:4000/round-control`, {
         class: classSel,
         branch: branchSel,
         academicYear: graduationYear,
@@ -259,7 +316,7 @@ function App() {
     try {
       const graduationYear = convertToGraduationYear(academicYear, classSel);
       
-      const res = await axios.get(`https://feedback-mlan.onrender.com/full-performance/${facultyToUse}`, {
+      const res = await axios.get(`http://localhost:4000/full-performance/${facultyToUse}`, {
         params: { 
           class: classSel, 
           branch: branchSel, 
@@ -295,7 +352,7 @@ function App() {
     try {
       const graduationYear = convertToGraduationYear(academicYear, classSel);
       
-      const res = await axios.get(`https://feedback-mlan.onrender.com/full-performance/${selectedFaculty}`, {
+      const res = await axios.get(`http://localhost:4000/full-performance/${selectedFaculty}`, {
         params: { 
           class: classSel, 
           branch: branchSel, 
@@ -326,7 +383,7 @@ function App() {
     try {
       const graduationYear = convertToGraduationYear(academicYear, classSel);
       
-      const res = await axios.get(`https://feedback-mlan.onrender.com/class-report`, {
+      const res = await axios.get(`http://localhost:4000/class-report`, {
         params: { 
           class: classSel, 
           branch: branchSel, 
@@ -349,7 +406,7 @@ function App() {
     try {
       const graduationYear = convertToGraduationYear(academicYear, classSel);
       
-      const res = await axios.get(`https://feedback-mlan.onrender.com/department-report`, {
+      const res = await axios.get(`http://localhost:4000/department-report`, {
         params: { 
           branch: branchSel, 
           academicYear: graduationYear,
@@ -729,32 +786,68 @@ function App() {
       {classSel && branchSel && academicYear && (
         <>
           <div className="upload-section">
-            <h3>Upload Data</h3>
-            <div className="upload-row">
-              <div className="upload-item">
-                <h4>Upload Students</h4>
-                <input 
-                  type="file" 
-                  accept=".csv" 
-                  onChange={e => setStudentsFile(e.target.files[0])}
-                />
-                <button onClick={uploadStudents}>Upload Students</button>
-                <p>CSV format: name, hallticket, branch</p>
-              </div>
-              
-              <div className="upload-item">
-                <h4>Upload Subjects & Faculties</h4>
-                <input 
-                  type="file" 
-                  accept=".csv" 
-                  onChange={e => setSubjectsFile(e.target.files[0])}
-                />
-                <button onClick={uploadSubjects}>Upload Subjects</button>
-                <p>CSV format: subject, faculty</p>
-                <p className="note">Note: Initial Round will be automatically enabled after uploading subjects</p>
-              </div>
-            </div>
+  <h3>Upload Data</h3>
+  <div className="upload-row">
+    <div className="upload-item">
+      <h4>Upload Students</h4>
+      <div className="file-input-container">
+        <input 
+          type="file" 
+          accept=".csv" 
+          onChange={handleStudentsFileChange}
+          id="students-file"
+          disabled={uploadLoading}
+        />
+        <label htmlFor="students-file" className="file-input-label">
+          📁 Choose Students CSV
+        </label>
+        {studentsFileName && (
+          <div className="file-selected">
+            ✅ Selected: <strong>{studentsFileName}</strong>
           </div>
+        )}
+      </div>
+      <button 
+        onClick={uploadStudents} 
+        disabled={uploadLoading || !studentsFile}
+        className={uploadLoading ? 'loading' : ''}
+      >
+        {uploadLoading ? '⏳ Uploading...' : '📤 Upload Students'}
+      </button>
+      <p>CSV format: name, hallticket, branch</p>
+    </div>
+    
+    <div className="upload-item">
+      <h4>Upload Subjects & Faculties</h4>
+      <div className="file-input-container">
+        <input 
+          type="file" 
+          accept=".csv" 
+          onChange={handleSubjectsFileChange}
+          id="subjects-file"
+          disabled={uploadLoading}
+        />
+        <label htmlFor="subjects-file" className="file-input-label">
+          📁 Choose Subjects CSV
+        </label>
+        {subjectsFileName && (
+          <div className="file-selected">
+            ✅ Selected: <strong>{subjectsFileName}</strong>
+          </div>
+        )}
+      </div>
+      <button 
+        onClick={uploadSubjects} 
+        disabled={uploadLoading || !subjectsFile}
+        className={uploadLoading ? 'loading' : ''}
+      >
+        {uploadLoading ? '⏳ Uploading...' : '📤 Upload Subjects'}
+      </button>
+      <p>CSV format: subject, faculty</p>
+      <p className="note">Note: Initial Round will be automatically enabled after uploading subjects</p>
+    </div>
+  </div>
+</div>
 
           <div className="performance-section">
             <h3>Reports</h3>

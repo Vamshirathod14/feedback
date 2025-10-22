@@ -23,7 +23,7 @@ function FeedbackSubmissionTracker() {
 
   const loadInitialData = async () => {
     try {
-      const response = await axios.get('https://feedback-mlan.onrender.com/classes');
+      const response = await axios.get('http://localhost:4000/classes');
       setClasses(response.data.classes || []);
       setBranches(response.data.branches || []);
       setAcademicYears(response.data.academicYears || []);
@@ -65,7 +65,7 @@ function FeedbackSubmissionTracker() {
       const graduationYear = convertToGraduationYear(selectedAcademicYear, selectedClass);
       
       // Get all students for the selected class, branch, and academic year
-      const studentsResponse = await axios.get('https://feedback-mlan.onrender.com/admin/students', {
+      const studentsResponse = await axios.get('http://localhost:4000/admin/students', {
         params: {
           class: selectedClass,
           branch: selectedBranch,
@@ -74,7 +74,7 @@ function FeedbackSubmissionTracker() {
       });
 
       // Get feedback submission records
-      const submissionResponse = await axios.get('https://feedback-mlan.onrender.com/feedback-submissions', {
+      const submissionResponse = await axios.get('http://localhost:4000/feedback-submissions', {
         params: {
           class: selectedClass,
           branch: selectedBranch,

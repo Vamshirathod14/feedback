@@ -21,7 +21,7 @@ const FacultyTrackingPage = () => {
   // Sample data for classes, branches, academic years
   const classes = ["1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"];
   const branches = ["CSE-A", "CSE-B", "CSE-C", "CSE-D", "CSM", "AIML", "ECE", "EEE", "CSE-E"];
-  const academicYears = ["2025-2026", "2026-2027", "2027-2028", "2028-2029"];
+  const academicYears = ["2025-2028", "2026-2029", "2027-2030", "2028-2031"];
 
   // Load all faculties
   useEffect(() => {
@@ -31,10 +31,35 @@ const FacultyTrackingPage = () => {
   const loadAllFaculties = async () => {
     try {
       const response = await axios.get('http://localhost:4000/all-faculties');
-      setFaculties(response.data);
+      
+      let facultiesData = [];
+      
+      if (Array.isArray(response.data)) {
+        facultiesData = response.data;
+      } else if (response.data && Array.isArray(response.data.faculties)) {
+        facultiesData = response.data.faculties;
+      } else if (response.data && typeof response.data === 'object') {
+        facultiesData = Object.values(response.data);
+      } else {
+        facultiesData = [];
+      }
+      
+      const cleanedFaculties = facultiesData
+        .map(faculty => {
+          if (typeof faculty === 'string') {
+            return faculty.trim();
+          }
+          return String(faculty || '').trim();
+        })
+        .filter(faculty => faculty && faculty.length > 0)
+        .sort((a, b) => a.localeCompare(b));
+      
+      setFaculties(cleanedFaculties);
+      
     } catch (error) {
       console.error('Failed to load faculties:', error);
       toast.error('Failed to load faculty list');
+      setFaculties([]);
     }
   };
 
@@ -51,7 +76,7 @@ const FacultyTrackingPage = () => {
     setLoading(true);
     try {
       const params = {
-        faculty: selectedFaculty,
+        faculty: selectedFaculty.trim(),
         ...filters
       };
 
@@ -59,9 +84,35 @@ const FacultyTrackingPage = () => {
       Object.keys(params).forEach(key => {
         if (!params[key]) delete params[key];
       });
-
+      
       const response = await axios.get('http://localhost:4000/faculty-history', { params });
-      setFacultyHistory(response.data);
+      
+      let historyData = [];
+      
+      if (Array.isArray(response.data)) {
+        historyData = response.data;
+      }
+      
+      const cleanedHistory = historyData
+        .map(record => ({
+          ...record,
+          academicYear: record.academicYear || 'N/A',
+          class: record.class || record.className || 'N/A',
+          branch: record.branch || record.department || 'N/A',
+          subject: record.subject || 'N/A',
+          round: record.round || 'N/A',
+          overallPercentage: parseFloat(record.overallPercentage) || 0,
+          studentCount: record.studentCount || record.students || 0,
+          subjectsHandled: Array.isArray(record.subjectsHandled) ? record.subjectsHandled : 
+                          record.subjectsHandled ? [record.subjectsHandled] : 
+                          record.subject ? [record.subject] : [],
+          labs: Array.isArray(record.labs) ? record.labs : 
+                record.labs ? [record.labs] : []
+        }))
+        .filter(record => record.overallPercentage >= 0);
+      
+      setFacultyHistory(cleanedHistory);
+      
     } catch (error) {
       console.error('Failed to load faculty history:', error);
       toast.error('Failed to load faculty history');
@@ -85,50 +136,66 @@ const FacultyTrackingPage = () => {
     });
   };
 
+  // Manual faculty search
+  const handleManualSearch = (facultyName) => {
+    if (facultyName.trim()) {
+      setSelectedFaculty(facultyName.trim());
+      toast.info(`Searching for: ${facultyName.trim()}`);
+    }
+  };
+
   // Calculate overall performance percentage
   const calculateOverallPerformance = (history) => {
     if (!history || history.length === 0) return 0;
-    
-    const totalPerformance = history.reduce((sum, record) => {
-      return sum + (record.overallPercentage || 0);
-    }, 0);
-    
-    return (totalPerformance / history.length).toFixed(2);
+    const validRecords = history.filter(record => record.overallPercentage > 0);
+    if (validRecords.length === 0) return 0;
+    const totalPerformance = validRecords.reduce((sum, record) => sum + (record.overallPercentage || 0), 0);
+    return (totalPerformance / validRecords.length).toFixed(2);
   };
 
   // Get unique subjects taught by faculty
   const getUniqueSubjects = (history) => {
     if (!history) return [];
-    const subjects = [...new Set(history.map(record => record.subject))];
-    return subjects;
+    const subjects = new Set();
+    history.forEach(record => {
+      if (record.subject && record.subject !== 'N/A') subjects.add(record.subject);
+      if (record.subjectsHandled) {
+        record.subjectsHandled.forEach(subject => {
+          if (subject && subject !== 'N/A') subjects.add(subject);
+        });
+      }
+    });
+    return Array.from(subjects);
   };
 
   // Get unique departments taught by faculty
   const getUniqueDepartments = (history) => {
     if (!history) return [];
-    const departments = [...new Set(history.map(record => record.branch))];
-    return departments;
+    const departments = new Set();
+    history.forEach(record => {
+      if (record.branch && record.branch !== 'N/A') departments.add(record.branch);
+    });
+    return Array.from(departments);
   };
 
   // Get performance by class
   const getPerformanceByClass = (history) => {
     if (!history) return {};
-    
     const performanceByClass = {};
+    const classCounts = {};
     history.forEach(record => {
-      if (!performanceByClass[record.class]) {
-        performanceByClass[record.class] = [];
+      if (record.class && record.class !== 'N/A' && record.overallPercentage > 0) {
+        if (!performanceByClass[record.class]) {
+          performanceByClass[record.class] = 0;
+          classCounts[record.class] = 0;
+        }
+        performanceByClass[record.class] += record.overallPercentage;
+        classCounts[record.class]++;
       }
-      performanceByClass[record.class].push(record.overallPercentage || 0);
     });
-
-    // Calculate average for each class
     Object.keys(performanceByClass).forEach(className => {
-      const performances = performanceByClass[className];
-      const average = performances.reduce((sum, perf) => sum + perf, 0) / performances.length;
-      performanceByClass[className] = average.toFixed(2);
+      performanceByClass[className] = (performanceByClass[className] / classCounts[className]).toFixed(2);
     });
-
     return performanceByClass;
   };
 
@@ -209,9 +276,9 @@ const FacultyTrackingPage = () => {
       const summaryData = [
         ['Overall Performance', `${overallPerformance}%`],
         ['Total Subjects Handled', uniqueSubjects.length],
-        ['Departments', uniqueDepartments.join(', ')],
+        ['Departments', uniqueDepartments.join(', ') || 'N/A'],
         ['Total Records', facultyHistory.length],
-        ['Classes Taught', Object.keys(performanceByClass).join(', ')]
+        ['Classes Taught', Object.keys(performanceByClass).join(', ') || 'N/A']
       ];
       
       autoTable(doc, {
@@ -379,7 +446,7 @@ const FacultyTrackingPage = () => {
           subject,
           avgPerformance + '%',
           data.classes.size,
-          Array.from(data.rounds).join(', ')
+          Array.from(data.rounds).join(', ') || 'N/A'
         ];
       });
       
@@ -473,51 +540,69 @@ const FacultyTrackingPage = () => {
             className="faculty-select"
           >
             <option value="">Choose a faculty...</option>
-            {faculties.map((faculty, index) => (
-              <option key={index} value={faculty}>
-                {faculty}
-              </option>
-            ))}
+            {faculties.length > 0 ? (
+              faculties.map((faculty, index) => (
+                <option key={`${faculty}-${index}`} value={faculty}>
+                  {faculty}
+                </option>
+              ))
+            ) : (
+              <option value="" disabled>No faculties loaded</option>
+            )}
           </select>
+        </div>
+
+        {/* Manual Search */}
+        <div className="filter-group">
+          <label>Manual Faculty Search:</label>
+          <div className="manual-search-container">
+            <input
+              type="text"
+              placeholder="Enter exact faculty name..."
+              id="manualSearchInput"
+              className="manual-search-input"
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleManualSearch(e.target.value);
+                  e.target.value = '';
+                }
+              }}
+            />
+            <button 
+              onClick={() => {
+                const input = document.getElementById('manualSearchInput');
+                handleManualSearch(input.value);
+                input.value = '';
+              }}
+              className="manual-search-btn"
+            >
+              Search
+            </button>
+          </div>
         </div>
 
         <div className="filter-row">
           <div className="filter-group">
             <label>Class:</label>
-            <select 
-              value={filters.class} 
-              onChange={(e) => handleFilterChange('class', e.target.value)}
-            >
+            <select value={filters.class} onChange={(e) => handleFilterChange('class', e.target.value)}>
               <option value="">All Classes</option>
-              {classes.map(cls => (
-                <option key={cls} value={cls}>{cls}</option>
-              ))}
+              {classes.map(cls => <option key={cls} value={cls}>{cls}</option>)}
             </select>
           </div>
 
           <div className="filter-group">
             <label>Branch:</label>
-            <select 
-              value={filters.branch} 
-              onChange={(e) => handleFilterChange('branch', e.target.value)}
-            >
+            <select value={filters.branch} onChange={(e) => handleFilterChange('branch', e.target.value)}>
               <option value="">All Branches</option>
-              {branches.map(branch => (
-                <option key={branch} value={branch}>{branch}</option>
-              ))}
+              {branches.map(branch => <option key={branch} value={branch}>{branch}</option>)}
             </select>
           </div>
 
           <div className="filter-group">
             <label>Academic Year:</label>
-            <select 
-              value={filters.academicYear} 
-              onChange={(e) => handleFilterChange('academicYear', e.target.value)}
-            >
+            <select value={filters.academicYear} onChange={(e) => handleFilterChange('academicYear', e.target.value)}>
               <option value="">All Years</option>
-              {academicYears.map(year => (
-                <option key={year} value={year}>{year}</option>
-              ))}
+              {academicYears.map(year => <option key={year} value={year}>{year}</option>)}
             </select>
           </div>
 
@@ -583,7 +668,7 @@ const FacultyTrackingPage = () => {
       )}
 
       {/* Performance by Class */}
-      {selectedFaculty && facultyHistory && (
+      {selectedFaculty && facultyHistory && Object.keys(getPerformanceByClass(facultyHistory)).length > 0 && (
         <div className="performance-by-class">
           <h3>Performance by Class</h3>
           <div className="class-performance-grid">
@@ -594,7 +679,7 @@ const FacultyTrackingPage = () => {
                 <div className="performance-bar">
                   <div 
                     className="performance-fill" 
-                    style={{ width: `${performance}%` }}
+                    style={{ width: `${Math.min(performance, 100)}%` }}
                   ></div>
                 </div>
               </div>
@@ -651,7 +736,7 @@ const FacultyTrackingPage = () => {
                           <div className="performance-bar-small">
                             <div 
                               className="performance-fill-small" 
-                              style={{ width: `${record.overallPercentage || 0}%` }}
+                              style={{ width: `${Math.min(record.overallPercentage || 0, 100)}%` }}
                             ></div>
                           </div>
                         </div>
@@ -660,7 +745,7 @@ const FacultyTrackingPage = () => {
                       <td>
                         {record.subjectsHandled && record.subjectsHandled.length > 0 
                           ? record.subjectsHandled.join(', ')
-                          : record.subject
+                          : record.subject || 'N/A'
                         }
                       </td>
                       <td>
