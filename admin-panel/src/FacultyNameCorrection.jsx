@@ -26,7 +26,7 @@ const FacultyNameCorrection = () => {
   const loadAllFaculties = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('http://localhost:4000/all-faculties');
+      const response = await axios.get('https://feedback-mlan.onrender.com/all-faculties');
       
       // Filter and sort faculties
       const filteredFaculties = response.data
@@ -96,7 +96,7 @@ const FacultyNameCorrection = () => {
       if (branchFilter) params.branch = branchFilter;
       if (academicYearFilter) params.academicYear = academicYearFilter;
 
-      const response = await axios.get('http://localhost:4000/faculty-history', { params });
+      const response = await axios.get('https://feedback-mlan.onrender.com/faculty-history', { params });
       return response.data || [];
     } catch (error) {
       console.error('Error fetching faculty details:', error);
