@@ -650,11 +650,14 @@ app.post('/login', async (req, res) => {
 // =============================================
 
 // Get all unique faculties across all classes and branches
+// Get all unique faculties across all classes and branches - FIXED VERSION
 app.get('/all-faculties', async (req, res) => {
   try {
     const faculties = await Subject.distinct('faculty');
     
-    // Filter out invalid faculty names
+    console.log(`🔍 Raw faculties found: ${faculties.length}`);
+    
+    // More inclusive filtering - only remove obviously invalid entries
     const filteredFaculties = faculties
       .filter(faculty => {
         if (!faculty || typeof faculty !== 'string') return false;
@@ -662,28 +665,30 @@ app.get('/all-faculties', async (req, res) => {
         const cleanFaculty = faculty.trim();
         if (cleanFaculty === '') return false;
         
-        // EXCLUDE hallticket patterns and numbers
+        // ONLY exclude obvious hallticket patterns (more specific)
         if (cleanFaculty.match(/^25C01A73\d{2}$/)) return false;
-        if (cleanFaculty.match(/^\d+$/)) return false;
-        if (cleanFaculty.match(/^\d{10,12}$/)) return false;
+        if (cleanFaculty.match(/^2[0-9][A-Z0-9]{8,10}$/)) return false;
         
-        // EXCLUDE common invalid patterns
+        // ONLY exclude very clear invalid patterns
         const invalidPatterns = [
-          'unknown', 'not assigned', 'not available', 'na', 'n/a', 
-          'tba', 'to be announced', 'pending', 'null', 'undefined'
+          'unknown', 'not assigned', 'not available', 'tba', 'to be announced', 
+          'pending', 'null', 'undefined', 'test', 'demo'
         ];
         
         const lowerFaculty = cleanFaculty.toLowerCase();
-        if (invalidPatterns.some(pattern => lowerFaculty.includes(pattern))) return false;
+        if (invalidPatterns.some(pattern => lowerFaculty === pattern)) return false;
         
-        // MUST contain alphabetic characters
-        if (!cleanFaculty.match(/[a-zA-Z]/)) return false;
+        // Allow numbers if they contain other characters (like "CS101")
+        // Allow single characters if they're part of names (like "A", "B", etc.)
         
         return true;
       })
       .map(faculty => faculty.trim())
       .filter((faculty, index, self) => self.indexOf(faculty) === index)
       .sort((a, b) => a.localeCompare(b));
+    
+    console.log(`✅ Filtered faculties: ${filteredFaculties.length}`);
+    console.log('📋 Sample faculties:', filteredFaculties.slice(0, 10));
     
     res.json(filteredFaculties);
   } catch (error) {
