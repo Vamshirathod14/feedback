@@ -4,6 +4,7 @@ import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import './Login.css';
+ 
 
 // API base URL configuration
 const API_BASE_URL = 'https://feedback-mlan.onrender.com';
@@ -29,107 +30,121 @@ function Login({ onLogin }) {
   const [showTechSupport, setShowTechSupport] = useState(false);
 
   // Technical Support Component
-  const TechnicalSupport = () => {
-    if (!showTechSupport) return null;
+   // Technical Support Component
+const TechnicalSupport = () => {
+  if (!showTechSupport) return null;
 
-    const contactDetails = {
-      developer: {
-        name: "Vamshi Ramavath",
-        email: "vamshinaikramavath@gmail.com",
-        phone: "+91 9014243908",
-        role: "Lead Developer - V Soft"
-      }
-    };
+   const contactDetails = {
+  developer: {
+    name: "Vamshi Ramavath",
+    email: "vamshinaikramavath@gmail.com",
+    phone: "+91 9014243908",
+    role: "Lead Developer - V Soft",
+    photo: "/vsoft_founder.jpg" // Note the leading slash
+  }
+};
 
-    const handleContact = (method) => {
-      switch (method) {
-        case 'email':
-          window.open(`mailto:${contactDetails.developer.email}?subject=Feedback System Support&body=Hello Vamshi, I need help with the feedback system.`);
-          break;
-        case 'whatsapp':
-          window.open(`https://wa.me/919014243908?text=Hello%20Vamshi,%20I%20need%20help%20with%20the%20feedback%20system.`);
-          break;
-        case 'phone':
-          window.open(`tel:${contactDetails.developer.phone}`);
-          break;
-        default:
-          break;
-      }
-    };
+  const handleContact = (method) => {
+    switch (method) {
+      case 'whatsapp':
+        window.open(`https://wa.me/919014243908?text=Hello%20Vamshi,%20I%20need%20help%20with%20the%20feedback%20system.`);
+        break;
+      case 'phone':
+        window.open(`tel:${contactDetails.developer.phone}`);
+        break;
+      default:
+        break;
+    }
+  };
 
-    return (
-      <div className="support-modal-overlay" onClick={() => setShowTechSupport(false)}>
-        <div className="support-modal" onClick={(e) => e.stopPropagation()}>
-          <div className="support-header">
-            <h3>🛠️ Developer Support</h3>
-            <button className="support-close" onClick={() => setShowTechSupport(false)}>×</button>
+  return (
+    <div className="support-modal-overlay" onClick={() => setShowTechSupport(false)}>
+      <div className="support-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="support-header">
+          <h3>🛠️ Developer Support</h3>
+          <button className="support-close" onClick={() => setShowTechSupport(false)}>×</button>
+        </div>
+        
+        <div className="support-content">
+          <div className="support-section">
+            <div className="contact-card">
+              {/* Your Photo Section */}
+              <div className="developer-photo-section">
+                <img 
+                  src={contactDetails.developer.photo} 
+                  alt={contactDetails.developer.name}
+                  className="developer-photo"
+                />
+                <div className="developer-badge">
+                  <span className="badge-icon">👨‍💻</span>
+                  <span>Developer</span>
+                </div>
+              </div>
+              
+              <div className="contact-info">
+                <h4>{contactDetails.developer.name}</h4>
+                <p className="developer-role">{contactDetails.developer.role}</p>
+                <div className="contact-details">
+                  <p className="contact-item">
+                    <span className="contact-icon">📱</span>
+                    <span>{contactDetails.developer.phone}</span>
+                  </p>
+                </div>
+              </div>
+              
+              <div className="contact-actions">
+                <button onClick={() => handleContact('whatsapp')} className="btn-whatsapp">
+                  💬 WhatsApp
+                </button>
+                <button onClick={() => handleContact('phone')} className="btn-call">
+                  📞 Call
+                </button>
+              </div>
+            </div>
           </div>
-          
-          <div className="support-content">
-            <div className="support-section">
-              <div className="contact-card">
-                <div className="contact-info">
-                  <strong>{contactDetails.developer.name}</strong>
-                  <p>{contactDetails.developer.role}</p>
-                  <p>📧 {contactDetails.developer.email}</p>
-                  <p>📱 {contactDetails.developer.phone}</p>
+
+          <div className="quick-solutions">
+            <h4>🚀 Quick Solutions</h4>
+            <div className="solutions-list">
+              <div className="solution-item">
+                <span className="solution-icon">🌐</span>
+                <div>
+                  <strong>Check Internet Connection</strong>
+                  <p>Ensure you have stable internet access</p>
                 </div>
-                <div className="contact-actions">
-                  <button onClick={() => handleContact('email')} className="btn-email">
-                    📧 Email
-                  </button>
-                  <button onClick={() => handleContact('whatsapp')} className="btn-whatsapp">
-                    💬 WhatsApp
-                  </button>
-                  <button onClick={() => handleContact('phone')} className="btn-call">
-                    📞 Call
-                  </button>
+              </div>
+              <div className="solution-item">
+                <span className="solution-icon">🧹</span>
+                <div>
+                  <strong>Clear Browser Cache</strong>
+                  <p>Clear cache and try again</p>
+                </div>
+              </div>
+              <div className="solution-item">
+                <span className="solution-icon">🔍</span>
+                <div>
+                  <strong>Try Different Browser</strong>
+                  <p>Use Chrome, Firefox, or Edge</p>
+                </div>
+              </div>
+              <div className="solution-item">
+                <span className="solution-icon">🔄</span>
+                <div>
+                  <strong>Restart Device</strong>
+                  <p>Sometimes a simple restart helps</p>
                 </div>
               </div>
             </div>
+          </div>
 
-            <div className="quick-solutions">
-              <h4>🚀 Quick Solutions</h4>
-              <div className="solutions-list">
-                <div className="solution-item">
-                  <span className="solution-icon">🌐</span>
-                  <div>
-                    <strong>Check Internet Connection</strong>
-                    <p>Ensure you have stable internet access</p>
-                  </div>
-                </div>
-                <div className="solution-item">
-                  <span className="solution-icon">🧹</span>
-                  <div>
-                    <strong>Clear Browser Cache</strong>
-                    <p>Clear cache and try again</p>
-                  </div>
-                </div>
-                <div className="solution-item">
-                  <span className="solution-icon">🔍</span>
-                  <div>
-                    <strong>Try Different Browser</strong>
-                    <p>Use Chrome, Firefox, or Edge</p>
-                  </div>
-                </div>
-                <div className="solution-item">
-                  <span className="solution-icon">🔄</span>
-                  <div>
-                    <strong>Restart Device</strong>
-                    <p>Sometimes a simple restart helps</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="support-footer">
-              <p>I'll respond to your query as soon as possible! ⚡</p>
-            </div>
+          <div className="support-footer">
+            <p>I'll respond to your query as soon as possible! ⚡</p>
           </div>
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   // Check if hallticket is valid and available for registration
   const checkHallticket = async (hallticket) => {
