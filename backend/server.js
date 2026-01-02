@@ -145,6 +145,24 @@ const upload = multer({
   }
 });
 
+ 
+// Then use formattedAcademicYear in queries
+
+// Helper: Standardize academic year format
+ // Helper: Standardize academic year format
+function formatAcademicYear(year) {
+  if (!year) return year;
+  const cleanYear = year.toString().trim();
+  if (/^\d{4}-\d{4}$/.test(cleanYear)) return cleanYear;
+  if (/^\d{4}$/.test(cleanYear)) {
+    const startYear = parseInt(cleanYear);
+    return `${startYear}-${startYear + 4}`;
+  }
+  return cleanYear;
+}
+
+
+
 // Middleware to verify JWT
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -1037,77 +1055,78 @@ app.get('/feedback-counts', async (req, res) => {
 app.get('/full-performance/:faculty', async (req, res) => {
   try {
     const { class: cls, branch, academicYear, round } = req.query;
-    
     if (!cls || !branch || !academicYear) {
       return res.status(400).json({ error: 'Class, branch, and academic year are required' });
     }
-    
-    // Build match criteria
-    const matchCriteria = { 
+
+    const matchCriteria = {
       faculty: req.params.faculty,
       class: cls,
-      branch: branch,
-      academicYear: academicYear
+      branch,
+      academicYear
     };
-    
-    // Add round filter if specified
-    if (round) {
-      matchCriteria.round = round;
-    }
-    
+    if (round) matchCriteria.round = round;
+
+    console.log('Performance query:', matchCriteria); // DEBUG
+
     const agg = await Feedback.aggregate([
-      { 
-        $match: matchCriteria
-      },
+      { $match: matchCriteria },
       { $unwind: "$answers" },
-      { $group: {
-        _id: {
-          subject: "$subject",
-          faculty: "$faculty",
-          class: "$class",
-          branch: "$branch",
-          academicYear: "$academicYear",
-          round: "$round"
-        },
-        totalScore: { $sum: "$answers.score" },
-        totalResponses: { $sum: 1 },
-        studentCount: { $addToSet: "$hallticket" }
-      }},
-      { $group: {
-        _id: {
-          subject: "$_id.subject",
-          faculty: "$_id.faculty",
-          class: "$_id.class",
-          branch: "$_id.branch",
-          academicYear: "$_id.academicYear",
-          round: "$_id.round"
-        },
-        avgScores: {
-          $push: {
-            k: "$_id.question",
-            v: { $divide: ["$totalScore", "$totalResponses"] }
-          }
-        },
-        studentCount: { $first: { $size: "$studentCount" } }
-      }},
-      { $project: {
-        faculty: "$_id.faculty",
-        subject: "$_id.subject",
-        class: "$_id.class",
-        branch: "$_id.branch",
-        academicYear: "$_id.academicYear",
-        round: "$_id.round",
-        studentCount: 1,
-        avgScores: { $arrayToObject: "$avgScores" }
-      }}
+      {
+        $group: {
+          _id: {
+            subject: "$subject",
+            faculty: "$faculty",
+            class: "$class",
+            branch: "$branch",
+            academicYear: "$academicYear",
+            round: "$round",
+            question: "$answers.question"
+          },
+          totalScore: { $sum: "$answers.score" },
+          totalResponses: { $sum: 1 },
+          studentCount: { $addToSet: "$hallticket" }
+        }
+      },
+      {
+        $group: {
+          _id: "$_id.subject",
+          faculty: { $first: "$_id.faculty" },
+          class: { $first: "$_id.class" },
+          branch: { $first: "$_id.branch" },
+          academicYear: { $first: "$_id.academicYear" },
+          round: { $first: "$_id.round" },
+          avgScores: {
+            $push: {
+              k: "$_id.question",
+              v: { $divide: ["$totalScore", "$totalResponses"] }
+            }
+          },
+          studentCount: { $first: { $size: "$studentCount" } }
+        }
+      },
+      {
+        $project: {
+          faculty: 1,
+          subject: "$_id",
+          class: 1,
+          branch: 1,
+          academicYear: 1,
+          round: 1,
+          studentCount: 1,
+          avgScores: { $arrayToObject: "$avgScores" }
+        }
+      }
     ]);
-    
-    res.json(agg);
+
+    console.log('Aggregation result:', agg.length); // DEBUG
+    res.json(agg); // Always returns array, even empty []
   } catch (error) {
-    console.error('Failed to fetch performance data:', error);
-    res.status(500).json({ error: 'Failed to fetch performance data' });
+    console.error('Performance aggregation ERROR:', error);
+    res.status(500).json({ error: 'Failed to fetch performance data', details: error.message });
   }
 });
+
 
 // Get class-wise report
 app.get('/class-report', async (req, res) => {
