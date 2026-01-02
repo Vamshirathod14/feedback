@@ -820,29 +820,21 @@ app.put('/update-faculty-name', async (req, res) => {
 app.get('/faculty-history', async (req, res) => {
   try {
     const { faculty, class: cls, branch, academicYear } = req.query;
-    
-    if (!faculty) {
-      return res.status(400).json({ error: 'Faculty name is required' });
-    }
-    
-    // Build match criteria for subjects
+    if (!faculty) return res.status(400).json({ error: 'Faculty name is required' });
+
+    // Build subject match criteria
     const subjectMatchCriteria = { faculty: faculty.trim() };
-    if (cls && cls !== '') subjectMatchCriteria.class = cls;
-    if (branch && branch !== '') subjectMatchCriteria.branch = branch;
-    if (academicYear && academicYear !== '') subjectMatchCriteria.academicYear = academicYear;
-    
-    // Get all subjects taught by the faculty
+    if (cls) subjectMatchCriteria.class = cls;
+    if (branch) subjectMatchCriteria.branch = branch;
+    if (academicYear) subjectMatchCriteria.academicYear = academicYear;
+
     const subjects = await Subject.find(subjectMatchCriteria);
-    
-    if (subjects.length === 0) {
-      return res.json([]);
-    }
-    
+    if (subjects.length === 0) return res.json([]);
+
     const facultyHistory = [];
-    
     for (const subject of subjects) {
       try {
-        // Get ALL feedback for this subject (both rounds)
+        // Fetch ALL feedback for this subject (both rounds)
         const feedbacks = await Feedback.find({
           faculty: subject.faculty,
           subject: subject.subject,
@@ -850,9 +842,8 @@ app.get('/faculty-history', async (req, res) => {
           branch: subject.branch,
           academicYear: subject.academicYear
         });
-        
+
         if (feedbacks.length === 0) {
-          // If no feedback, still include the subject but with zero performance
           facultyHistory.push({
             faculty: subject.faculty,
             subject: subject.subject,
@@ -862,62 +853,58 @@ app.get('/faculty-history', async (req, res) => {
             overallPercentage: 0,
             studentCount: 0,
             round: 'no-data',
-            labs: subject.subject.toLowerCase().includes('lab') ? [subject.subject] : [],
             subjectsHandled: [subject.subject],
-            totalSuggestions: 0
+            labs: subject.subject.toLowerCase().includes('lab') ? [subject.subject] : []
           });
           continue;
         }
-        
-        // Group feedback by round
-        const initialFeedbacks = feedbacks.filter(f => f.round === 'initial');
-        const finalFeedbacks = feedbacks.filter(f => f.round === 'final');
-        
-        // Calculate performance for each round
-        let round = 'no-data';
-        let overallPercentage = 0;
-        let studentCount = 0;
-        
-        // Prefer final round if available, otherwise use initial
-        if (finalFeedbacks.length > 0) {
-          round = 'final';
-          const totalScore = finalFeedbacks.reduce((sum, fb) => {
-            return sum + fb.answers.reduce((scoreSum, answer) => scoreSum + answer.score, 0);
-          }, 0);
-          const totalQuestions = finalFeedbacks.reduce((sum, fb) => sum + fb.answers.length, 0);
-          overallPercentage = totalQuestions > 0 ? (totalScore / (totalQuestions * 5)) * 100 : 0;
-          studentCount = new Set(finalFeedbacks.map(f => f.hallticket)).size;
-        } else if (initialFeedbacks.length > 0) {
-          round = 'initial';
-          const totalScore = initialFeedbacks.reduce((sum, fb) => {
-            return sum + fb.answers.reduce((scoreSum, answer) => scoreSum + answer.score, 0);
-          }, 0);
+
+        // Separate initial and final feedbacks
+        const initialFeedbacks = feedbacks.filter(f => (f.round || '').toLowerCase().includes('initial'));
+        const finalFeedbacks = feedbacks.filter(f => (f.round || '').toLowerCase().includes('final'));
+
+        // Calculate initial performance
+        let initialPercentage = 0;
+        if (initialFeedbacks.length > 0) {
+          const totalScore = initialFeedbacks.reduce((sum, fb) => 
+            sum + fb.answers.reduce((scoreSum, answer) => scoreSum + answer.score, 0), 0);
           const totalQuestions = initialFeedbacks.reduce((sum, fb) => sum + fb.answers.length, 0);
-          overallPercentage = totalQuestions > 0 ? (totalScore / (totalQuestions * 5)) * 100 : 0;
-          studentCount = new Set(initialFeedbacks.map(f => f.hallticket)).size;
+          initialPercentage = totalQuestions > 0 ? (totalScore / totalQuestions * 100 / 5) : 0;
         }
-        
-        // Count suggestions
-        const totalSuggestions = feedbacks.filter(f => 
-          f.suggestion && f.suggestion.trim() !== ''
-        ).length;
-        
+
+        // Calculate final performance
+        let finalPercentage = 0;
+        if (finalFeedbacks.length > 0) {
+          const totalScore = finalFeedbacks.reduce((sum, fb) => 
+            sum + fb.answers.reduce((scoreSum, answer) => scoreSum + answer.score, 0), 0);
+          const totalQuestions = finalFeedbacks.reduce((sum, fb) => sum + fb.answers.length, 0);
+          finalPercentage = totalQuestions > 0 ? (totalScore / totalQuestions * 100 / 5) : 0;
+        }
+
+        const studentCount = new Set([...initialFeedbacks, ...finalFeedbacks].map(f => f.hallticket)).size;
+        const totalSuggestions = feedbacks.filter(f => f.suggestion && f.suggestion.trim()).length;
+
         facultyHistory.push({
           faculty: subject.faculty,
           subject: subject.subject,
-          class: subject.class,
-          branch: subject.branch,
+          class: subject.class || subject.className,
+          branch: subject.branch || subject.department,
           academicYear: subject.academicYear,
-          overallPercentage: parseFloat(overallPercentage.toFixed(2)),
-          studentCount: studentCount,
-          round: round,
-          labs: subject.subject.toLowerCase().includes('lab') ? [subject.subject] : [],
+          studentCount,
           subjectsHandled: [subject.subject],
-          totalSuggestions: totalSuggestions
+          labs: subject.subject.toLowerCase().includes('lab') ? [subject.subject] : [],
+          overallPercentage: finalPercentage || initialPercentage, // Legacy fallback
+          round: finalFeedbacks.length > 0 ? 'final' : initialFeedbacks.length > 0 ? 'initial' : 'no-data',
+          // NEW: Separate initial/final for frontend table
+          initialPercentage: parseFloat(initialPercentage.toFixed(2)),
+          finalPercentage: parseFloat(finalPercentage.toFixed(2)),
+          hasInitial: initialFeedbacks.length > 0,
+          hasFinal: finalFeedbacks.length > 0,
+          totalSuggestions
         });
-        
       } catch (error) {
-        // Continue with next subject instead of returning null
+        console.error('Subject processing error:', error);
+        // Fallback record
         facultyHistory.push({
           faculty: subject.faculty,
           subject: subject.subject,
@@ -927,30 +914,30 @@ app.get('/faculty-history', async (req, res) => {
           overallPercentage: 0,
           studentCount: 0,
           round: 'error',
-          labs: [],
-          subjectsHandled: [subject.subject],
-          totalSuggestions: 0
+          initialPercentage: 0,
+          finalPercentage: 0,
+          hasInitial: false,
+          hasFinal: false,
+          subjectsHandled: [subject.subject]
         });
       }
     }
-    
-    // Sort by academic year (descending) and class (ascending)
+
+    // Sort: academic year desc, class asc
     facultyHistory.sort((a, b) => {
       if (a.academicYear !== b.academicYear) {
         return b.academicYear.localeCompare(a.academicYear);
       }
       return a.class.localeCompare(b.class);
     });
-    
+
     res.json(facultyHistory);
-    
   } catch (error) {
     console.error('Failed to fetch faculty history:', error);
-    res.status(500).json({ 
-      error: 'Failed to fetch faculty history: ' + error.message
-    });
+    res.status(500).json({ error: 'Failed to fetch faculty history' });
   }
 });
+
 
 // Clean up faculty data - REMOVE HALLTICKETS FROM FACULTY FIELD
 app.delete('/cleanup-faculty-data', async (req, res) => {
