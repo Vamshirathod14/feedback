@@ -93,23 +93,63 @@ const FacultyTrackingPage = () => {
         historyData = response.data;
       }
       
-      const cleanedHistory = historyData
-        .map(record => ({
-          ...record,
-          academicYear: record.academicYear || 'N/A',
-          class: record.class || record.className || 'N/A',
-          branch: record.branch || record.department || 'N/A',
-          subject: record.subject || 'N/A',
-          round: record.round || 'N/A',
-          overallPercentage: parseFloat(record.overallPercentage) || 0,
-          studentCount: record.studentCount || record.students || 0,
-          subjectsHandled: Array.isArray(record.subjectsHandled) ? record.subjectsHandled : 
-                          record.subjectsHandled ? [record.subjectsHandled] : 
-                          record.subject ? [record.subject] : [],
-          labs: Array.isArray(record.labs) ? record.labs : 
-                record.labs ? [record.labs] : []
-        }))
-        .filter(record => record.overallPercentage >= 0);
+      // Process data to separate initial and final feedback
+      const processedData = [];
+      const recordMap = new Map(); // To group by subject, class, branch, academic year
+      
+      historyData.forEach(record => {
+        const key = `${record.subject || ''}_${record.class || ''}_${record.branch || ''}_${record.academicYear || ''}`;
+        
+        if (!recordMap.has(key)) {
+          recordMap.set(key, {
+            academicYear: record.academicYear || 'N/A',
+            class: record.class || record.className || 'N/A',
+            branch: record.branch || record.department || 'N/A',
+            subject: record.subject || 'N/A',
+            studentCount: record.studentCount || record.students || 0,
+            subjectsHandled: Array.isArray(record.subjectsHandled) ? record.subjectsHandled : 
+                            record.subjectsHandled ? [record.subjectsHandled] : 
+                            record.subject ? [record.subject] : [],
+            labs: Array.isArray(record.labs) ? record.labs : 
+                  record.labs ? [record.labs] : [],
+            initialPercentage: 0,
+            finalPercentage: 0,
+            hasInitial: false,
+            hasFinal: false
+          });
+        }
+        
+        const existingRecord = recordMap.get(key);
+        const round = (record.round || '').toLowerCase();
+        const percentage = parseFloat(record.overallPercentage) || 0;
+        
+        if (round.includes('initial')) {
+          existingRecord.initialPercentage = percentage;
+          existingRecord.hasInitial = true;
+        } else if (round.includes('final')) {
+          existingRecord.finalPercentage = percentage;
+          existingRecord.hasFinal = true;
+        } else {
+          // If no round specified, use as both
+          existingRecord.initialPercentage = percentage;
+          existingRecord.finalPercentage = percentage;
+          existingRecord.hasInitial = true;
+          existingRecord.hasFinal = true;
+        }
+      });
+      
+      // Convert map to array
+       const cleanedHistory = historyData
+  .filter(record => record.initialPercentage > 0 || record.finalPercentage > 0)
+  .map(record => ({
+    ...record,
+    improvement: record.hasInitial && record.hasFinal 
+      ? (record.finalPercentage - record.initialPercentage).toFixed(2)
+      : 'N/A',
+    hasBothRounds: record.hasInitial && record.hasFinal
+  }));
+
+setFacultyHistory(cleanedHistory);
       
       setFacultyHistory(cleanedHistory);
       
@@ -144,13 +184,43 @@ const FacultyTrackingPage = () => {
     }
   };
 
-  // Calculate overall performance percentage
-  const calculateOverallPerformance = (history) => {
+  // Calculate overall performance percentage for initial and final
+  const calculateOverallPerformance = (history, round = 'final') => {
     if (!history || history.length === 0) return 0;
-    const validRecords = history.filter(record => record.overallPercentage > 0);
+    
+    let validRecords = [];
+    if (round === 'initial') {
+      validRecords = history.filter(record => record.initialPercentage > 0);
+    } else if (round === 'final') {
+      validRecords = history.filter(record => record.finalPercentage > 0);
+    } else {
+      // Average of final, fallback to initial
+      validRecords = history.filter(record => record.finalPercentage > 0 || record.initialPercentage > 0);
+    }
+    
     if (validRecords.length === 0) return 0;
-    const totalPerformance = validRecords.reduce((sum, record) => sum + (record.overallPercentage || 0), 0);
+    
+    const totalPerformance = validRecords.reduce((sum, record) => {
+      if (round === 'initial') {
+        return sum + record.initialPercentage;
+      } else if (round === 'final') {
+        return sum + record.finalPercentage;
+      } else {
+        // Prefer final, fallback to initial
+        return sum + (record.finalPercentage > 0 ? record.finalPercentage : record.initialPercentage);
+      }
+    }, 0);
+    
     return (totalPerformance / validRecords.length).toFixed(2);
+  };
+
+  // Calculate average improvement
+  const calculateAverageImprovement = (history) => {
+    if (!history || history.length === 0) return 0;
+    const validRecords = history.filter(record => record.hasBothRounds && record.improvement !== 'N/A');
+    if (validRecords.length === 0) return 0;
+    const totalImprovement = validRecords.reduce((sum, record) => sum + parseFloat(record.improvement), 0);
+    return (totalImprovement / validRecords.length).toFixed(2);
   };
 
   // Get unique subjects taught by faculty
@@ -184,12 +254,12 @@ const FacultyTrackingPage = () => {
     const performanceByClass = {};
     const classCounts = {};
     history.forEach(record => {
-      if (record.class && record.class !== 'N/A' && record.overallPercentage > 0) {
+      if (record.class && record.class !== 'N/A' && record.finalPercentage > 0) {
         if (!performanceByClass[record.class]) {
           performanceByClass[record.class] = 0;
           classCounts[record.class] = 0;
         }
-        performanceByClass[record.class] += record.overallPercentage;
+        performanceByClass[record.class] += record.finalPercentage;
         classCounts[record.class]++;
       }
     });
@@ -268,13 +338,17 @@ const FacultyTrackingPage = () => {
       doc.text("SUMMARY", 14, startY);
       startY += 8;
       
-      const overallPerformance = calculateOverallPerformance(facultyHistory);
+      const initialPerformance = calculateOverallPerformance(facultyHistory, 'initial');
+      const finalPerformance = calculateOverallPerformance(facultyHistory, 'final');
+      const averageImprovement = calculateAverageImprovement(facultyHistory);
       const uniqueSubjects = getUniqueSubjects(facultyHistory);
       const uniqueDepartments = getUniqueDepartments(facultyHistory);
       const performanceByClass = getPerformanceByClass(facultyHistory);
       
       const summaryData = [
-        ['Overall Performance', `${overallPerformance}%`],
+        ['Initial Feedback Performance', `${initialPerformance}%`],
+        ['Final Feedback Performance', `${finalPerformance}%`],
+        ['Average Improvement', `${averageImprovement}%`],
         ['Total Subjects Handled', uniqueSubjects.length],
         ['Departments', uniqueDepartments.join(', ') || 'N/A'],
         ['Total Records', facultyHistory.length],
@@ -303,7 +377,7 @@ const FacultyTrackingPage = () => {
       // Performance by Class Section
       if (Object.keys(performanceByClass).length > 0) {
         doc.setFont(undefined, 'bold');
-        doc.text("PERFORMANCE BY CLASS", 14, startY);
+        doc.text("FINAL PERFORMANCE BY CLASS", 14, startY);
         startY += 8;
         
         const classPerformanceData = Object.entries(performanceByClass).map(([className, performance]) => [
@@ -313,7 +387,7 @@ const FacultyTrackingPage = () => {
         
         autoTable(doc, {
           startY: startY,
-          head: [['Class', 'Average Performance (%)']],
+          head: [['Class', 'Final Performance (%)']],
           body: classPerformanceData,
           theme: 'grid',
           headStyles: {
@@ -341,14 +415,15 @@ const FacultyTrackingPage = () => {
         record.class || 'N/A',
         record.branch || 'N/A',
         record.subject || 'N/A',
-        record.round ? record.round.toUpperCase() : 'N/A',
-        `${record.overallPercentage?.toFixed(2) || '0.00'}%`,
+        record.initialPercentage > 0 ? `${record.initialPercentage.toFixed(2)}%` : 'N/A',
+        record.finalPercentage > 0 ? `${record.finalPercentage.toFixed(2)}%` : 'N/A',
+        record.hasBothRounds ? `${record.improvement}%` : 'N/A',
         record.studentCount || 'N/A'
       ]);
       
       autoTable(doc, {
         startY: startY,
-        head: [['Academic Year', 'Class', 'Branch', 'Subject', 'Round', 'Performance (%)', 'Students']],
+        head: [['Academic Year', 'Class', 'Branch', 'Subject', 'Initial (%)', 'Final (%)', 'Improvement', 'Students']],
         body: tableData,
         theme: 'grid',
         headStyles: {
@@ -425,34 +500,58 @@ const FacultyTrackingPage = () => {
       doc.text("PERFORMANCE ANALYSIS BY SUBJECT", 14, startY);
       startY += 10;
       
-      // Group by subject and calculate averages
+      // Group by subject and calculate averages for both rounds
       const subjectPerformance = {};
       facultyHistory.forEach(record => {
         if (!subjectPerformance[record.subject]) {
           subjectPerformance[record.subject] = {
-            performances: [],
+            initialPerformances: [],
+            finalPerformances: [],
+            improvements: [],
             classes: new Set(),
-            rounds: new Set()
+            hasBothCount: 0
           };
         }
-        subjectPerformance[record.subject].performances.push(record.overallPercentage || 0);
+        
+        if (record.initialPercentage > 0) {
+          subjectPerformance[record.subject].initialPerformances.push(record.initialPercentage);
+        }
+        if (record.finalPercentage > 0) {
+          subjectPerformance[record.subject].finalPerformances.push(record.finalPercentage);
+        }
+        if (record.hasBothRounds) {
+          subjectPerformance[record.subject].improvements.push(parseFloat(record.improvement));
+          subjectPerformance[record.subject].hasBothCount++;
+        }
         subjectPerformance[record.subject].classes.add(record.class);
-        if (record.round) subjectPerformance[record.subject].rounds.add(record.round);
       });
       
       const subjectAnalysisData = Object.entries(subjectPerformance).map(([subject, data]) => {
-        const avgPerformance = (data.performances.reduce((a, b) => a + b, 0) / data.performances.length).toFixed(2);
+        const avgInitial = data.initialPerformances.length > 0 
+          ? (data.initialPerformances.reduce((a, b) => a + b, 0) / data.initialPerformances.length).toFixed(2)
+          : 'N/A';
+        
+        const avgFinal = data.finalPerformances.length > 0 
+          ? (data.finalPerformances.reduce((a, b) => a + b, 0) / data.finalPerformances.length).toFixed(2)
+          : 'N/A';
+        
+        const avgImprovement = data.improvements.length > 0
+          ? (data.improvements.reduce((a, b) => a + b, 0) / data.improvements.length).toFixed(2)
+          : 'N/A';
+          
         return [
           subject,
-          avgPerformance + '%',
+          avgInitial !== 'N/A' ? avgInitial + '%' : 'N/A',
+          avgFinal !== 'N/A' ? avgFinal + '%' : 'N/A',
+          avgImprovement !== 'N/A' ? avgImprovement + '%' : 'N/A',
           data.classes.size,
-          Array.from(data.rounds).join(', ') || 'N/A'
+          data.hasBothCount
         ];
       });
       
       autoTable(doc, {
         startY: startY,
-        head: [['Subject', 'Avg Performance', 'Classes', 'Rounds']],
+        head: [['Subject', 'Avg Initial', 'Avg Final', 'Avg Improvement', 'Classes', 'Both Rounds']],
         body: subjectAnalysisData,
         theme: 'grid',
         headStyles: {
@@ -461,48 +560,53 @@ const FacultyTrackingPage = () => {
           fontStyle: 'bold'
         },
         styles: {
-          fontSize: 9,
-          cellPadding: 3
+          fontSize: 8,
+          cellPadding: 2,
+          overflow: 'linebreak'
         },
         margin: { left: 14, right: 14 }
       });
       
       startY = doc.lastAutoTable.finalY + 15;
       
-      // Department-wise Performance
-      doc.setFont(undefined, 'bold');
-      doc.text("DEPARTMENT-WISE PERFORMANCE", 14, startY);
-      startY += 8;
-      
-      const departmentPerformance = {};
-      facultyHistory.forEach(record => {
-        if (!departmentPerformance[record.branch]) {
-          departmentPerformance[record.branch] = [];
-        }
-        departmentPerformance[record.branch].push(record.overallPercentage || 0);
-      });
-      
-      const departmentData = Object.entries(departmentPerformance).map(([dept, performances]) => {
-        const avg = (performances.reduce((a, b) => a + b, 0) / performances.length).toFixed(2);
-        return [dept, performances.length, avg + '%'];
-      });
-      
-      autoTable(doc, {
-        startY: startY,
-        head: [['Department', 'Records', 'Avg Performance']],
-        body: departmentData,
-        theme: 'grid',
-        headStyles: {
-          fillColor: [52, 152, 219],
-          textColor: 255,
-          fontStyle: 'bold'
-        },
-        styles: {
-          fontSize: 9,
-          cellPadding: 3
-        },
-        margin: { left: 14, right: 14 }
-      });
+      // Improvement Analysis
+      const recordsWithBothRounds = facultyHistory.filter(record => record.hasBothRounds);
+      if (recordsWithBothRounds.length > 0) {
+        doc.setFont(undefined, 'bold');
+        doc.text("IMPROVEMENT ANALYSIS", 14, startY);
+        startY += 8;
+        
+        const improvementStats = {
+          'Significant Improvement (>5%)': recordsWithBothRounds.filter(r => parseFloat(r.improvement) > 5).length,
+          'Moderate Improvement (1-5%)': recordsWithBothRounds.filter(r => parseFloat(r.improvement) >= 1 && parseFloat(r.improvement) <= 5).length,
+          'No Significant Change (-1 to 1%)': recordsWithBothRounds.filter(r => parseFloat(r.improvement) >= -1 && parseFloat(r.improvement) < 1).length,
+          'Decreased Performance (< -1%)': recordsWithBothRounds.filter(r => parseFloat(r.improvement) < -1).length,
+          'Total Both Rounds': recordsWithBothRounds.length
+        };
+        
+        const improvementData = Object.entries(improvementStats).map(([category, count]) => [
+          category,
+          count.toString(),
+          `${((count / recordsWithBothRounds.length) * 100).toFixed(1)}%`
+        ]);
+        
+        autoTable(doc, {
+          startY: startY,
+          head: [['Improvement Category', 'Count', 'Percentage']],
+          body: improvementData,
+          theme: 'grid',
+          headStyles: {
+            fillColor: [52, 152, 219],
+            textColor: 255,
+            fontStyle: 'bold'
+          },
+          styles: {
+            fontSize: 9,
+            cellPadding: 3
+          },
+          margin: { left: 14, right: 14 }
+        });
+      }
       
       // Footer
       const pageCount = doc.internal.getNumberOfPages();
@@ -527,7 +631,7 @@ const FacultyTrackingPage = () => {
     <div className="faculty-tracking-page">
       <div className="page-header">
         <h1>Faculty Performance Tracking</h1>
-        <p>Track and analyze faculty performance across different classes and subjects</p>
+        <p>Track and analyze faculty performance across different classes and subjects with separate Initial and Final feedback</p>
       </div>
 
       {/* Filters Section */}
@@ -633,9 +737,32 @@ const FacultyTrackingPage = () => {
           <h2>Faculty Summary: {selectedFaculty}</h2>
           <div className="summary-cards">
             <div className="summary-card">
-              <h3>Overall Performance</h3>
+              <h3>Initial Feedback</h3>
               <div className="performance-score">
-                {calculateOverallPerformance(facultyHistory)}%
+                {calculateOverallPerformance(facultyHistory, 'initial')}%
+              </div>
+              <div className="performance-label">
+                Average Initial Performance
+              </div>
+            </div>
+            
+            <div className="summary-card">
+              <h3>Final Feedback</h3>
+              <div className="performance-score">
+                {calculateOverallPerformance(facultyHistory, 'final')}%
+              </div>
+              <div className="performance-label">
+                Average Final Performance
+              </div>
+            </div>
+            
+            <div className="summary-card">
+              <h3>Improvement</h3>
+              <div className="performance-score improvement">
+                {calculateAverageImprovement(facultyHistory)}%
+              </div>
+              <div className="performance-label">
+                Average Improvement
               </div>
             </div>
             
@@ -670,7 +797,7 @@ const FacultyTrackingPage = () => {
       {/* Performance by Class */}
       {selectedFaculty && facultyHistory && Object.keys(getPerformanceByClass(facultyHistory)).length > 0 && (
         <div className="performance-by-class">
-          <h3>Performance by Class</h3>
+          <h3>Final Performance by Class</h3>
           <div className="class-performance-grid">
             {Object.entries(getPerformanceByClass(facultyHistory)).map(([className, performance]) => (
               <div key={className} className="class-performance-card">
@@ -692,7 +819,7 @@ const FacultyTrackingPage = () => {
       {selectedFaculty && (
         <div className="history-section">
           <div className="section-header">
-            <h3>Detailed Teaching History</h3>
+            <h3>Detailed Teaching History (Separate Initial & Final Feedback)</h3>
             <div className="action-buttons">
               <button onClick={loadFacultyHistory} className="refresh-btn" disabled={loading}>
                 {loading ? 'Loading...' : 'Refresh'}
@@ -711,8 +838,9 @@ const FacultyTrackingPage = () => {
                     <th>Class</th>
                     <th>Branch</th>
                     <th>Subject</th>
-                    <th>Round</th>
-                    <th>Performance</th>
+                    <th>Initial Feedback (%)</th>
+                    <th>Final Feedback (%)</th>
+                    <th>Improvement (%)</th>
                     <th>Student Count</th>
                     <th>Subjects Handled</th>
                     <th>Labs</th>
@@ -726,19 +854,38 @@ const FacultyTrackingPage = () => {
                       <td>{record.branch}</td>
                       <td className="subject-cell">{record.subject}</td>
                       <td>
-                        <span className={`round-badge ${record.round}`}>
-                          {record.round}
-                        </span>
+                        <div className="performance-cell initial">
+                          <span className="percentage">
+                            {record.initialPercentage > 0 ? `${record.initialPercentage.toFixed(2)}%` : 'N/A'}
+                          </span>
+                          {record.initialPercentage > 0 && (
+                            <div className="performance-bar-small">
+                              <div 
+                                className="performance-fill-small" 
+                                style={{ width: `${Math.min(record.initialPercentage, 100)}%` }}
+                              ></div>
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td>
-                        <div className="performance-cell">
-                          <span className="percentage">{record.overallPercentage?.toFixed(2)}%</span>
-                          <div className="performance-bar-small">
-                            <div 
-                              className="performance-fill-small" 
-                              style={{ width: `${Math.min(record.overallPercentage || 0, 100)}%` }}
-                            ></div>
-                          </div>
+                        <div className="performance-cell final">
+                          <span className="percentage">
+                            {record.finalPercentage > 0 ? `${record.finalPercentage.toFixed(2)}%` : 'N/A'}
+                          </span>
+                          {record.finalPercentage > 0 && (
+                            <div className="performance-bar-small">
+                              <div 
+                                className="performance-fill-small" 
+                                style={{ width: `${Math.min(record.finalPercentage, 100)}%` }}
+                              ></div>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <div className={`improvement-cell ${record.hasBothRounds ? (parseFloat(record.improvement) >= 0 ? 'positive' : 'negative') : 'neutral'}`}>
+                          {record.hasBothRounds ? `${record.improvement}%` : 'N/A'}
                         </div>
                       </td>
                       <td>{record.studentCount || 'N/A'}</td>
@@ -771,7 +918,7 @@ const FacultyTrackingPage = () => {
         <div className="placeholder">
           <div className="placeholder-icon">👨‍🏫</div>
           <h3>Select a Faculty to View Details</h3>
-          <p>Choose a faculty member from the dropdown above to see their complete teaching history and performance metrics.</p>
+          <p>Choose a faculty member from the dropdown above to see their complete teaching history and performance metrics with separate Initial and Final feedback.</p>
         </div>
       )}
     </div>

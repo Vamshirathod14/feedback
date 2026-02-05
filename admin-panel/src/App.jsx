@@ -305,42 +305,47 @@ const handleSubjectsFileChange = (e) => {
   };
 
   // View faculty feedback aggregation with round support
-  const loadPerformance = async (round = "initial") => {
-    if (!facultyName && !selectedFaculty) {
-      toast.error("Please enter or select a faculty name!");
+   const loadPerformance = async (round = "initial") => {
+  if (!facultyName && !selectedFaculty) {
+    toast.error("Please enter or select a faculty name!");
+    return;
+  }
+  
+  const facultyToUse = facultyName || selectedFaculty;
+  
+  try {
+    const graduationYear = convertToGraduationYear(academicYear, classSel);
+    console.log('Calling API:', `full-performance/${facultyToUse}`, { class: classSel, branch: branchSel, academicYear: graduationYear, round });
+    
+    const res = await axios.get(`https://feedback-mlan.onrender.com/full-performance/${facultyToUse}`, {
+      params: { class: classSel, branch: branchSel, academicYear: graduationYear, round }
+    });
+    
+    console.log('API Response:', res.data); // DEBUG: Check structure
+    
+    setPerformance(res.data);
+    
+    if (res.data.length === 0) {
+      toast.warning('No feedback data found for this faculty.');
+      setFacultyData(null);
       return;
     }
     
-    const facultyToUse = facultyName || selectedFaculty;
+    const percentages = calculateFacultyPercentage(res.data);
+    setFacultyData({
+      name: facultyToUse,
+      percentages,
+      performance: res.data,
+      studentCount: res.data[0]?.studentCount || 0,
+      round
+    });
     
-    try {
-      const graduationYear = convertToGraduationYear(academicYear, classSel);
-      
-      const res = await axios.get(`https://feedback-mlan.onrender.com/full-performance/${facultyToUse}`, {
-        params: { 
-          class: classSel, 
-          branch: branchSel, 
-          academicYear: graduationYear,
-          round: round
-        }
-      });
-      
-      setPerformance(res.data);
-      
-      if (res.data.length > 0) {
-        const percentages = calculateFacultyPercentage(res.data);
-        setFacultyData({
-          name: facultyToUse,
-          percentages: percentages,
-          performance: res.data,
-          studentCount: res.data[0]?.studentCount || 0,
-          round: round
-        });
-      }
-    } catch (error) {
-      toast.error("Failed to load performance data: " + error.message);
-    }
-  };
+  } catch (error) {
+    console.error('Full error:', error.response?.data || error);
+    toast.error(`Failed: ${error.response?.status || 500} - ${error.response?.data?.error || error.message}`);
+  }
+};
+
 
   // Load performance for selected faculty from dropdown
   const loadSelectedFacultyPerformance = async (round = "initial") => {
@@ -449,58 +454,74 @@ const handleSubjectsFileChange = (e) => {
   };
 
   // Prepare data for pie chart
-  const getPieChartData = () => {
-    if (!facultyData) return null;
-    
-    const labels = Object.keys(facultyData.percentages);
-    const data = Object.values(facultyData.percentages);
-    
-    const backgroundColors = [
-      'rgba(255, 99, 132, 0.6)',
-      'rgba(54, 162, 235, 0.6)',
-      'rgba(255, 206, 86, 0.6)',
-      'rgba(75, 192, 192, 0.6)',
-      'rgba(153, 102, 255, 0.6)',
-      'rgba(255, 159, 64, 0.6)',
-      'rgba(199, 199, 199, 0.6)',
-      'rgba(83, 102, 255, 0.6)',
-      'rgba(40, 159, 64, 0.6)',
-      'rgba(210, 99, 132, 0.6)'
-    ];
-    
-    return {
-      labels: labels,
-      datasets: [
-        {
-          data: data,
-          backgroundColor: backgroundColors.slice(0, labels.length),
-          borderColor: backgroundColors.map(color => color.replace('0.6', '1')),
-          borderWidth: 1,
-        },
-      ],
-    };
-  };
+   // Prepare data for pie chart - FIXED
+const getPieChartData = () => {
+  if (!facultyData || !facultyData.percentages || Object.keys(facultyData.percentages).length === 0) {
+    return null;
+  }
+  
+  const labels = Object.keys(facultyData.percentages);
+  const data = Object.values(facultyData.percentages).map(val => Number(val) || 0); // Ensure numbers
+  
+  if (labels.length === 0 || data.every(d => d === 0)) {
+    return null;
+  }
 
-  // Prepare data for bar chart
-  const getBarChartData = () => {
-    if (!facultyData) return null;
-    
-    const labels = Object.keys(facultyData.percentages);
-    const data = Object.values(facultyData.percentages);
-    
-    return {
-      labels: labels,
-      datasets: [
-        {
-          label: 'Performance Percentage',
-          data: data,
-          backgroundColor: 'rgba(54, 162, 235, 0.6)',
-          borderColor: 'rgba(54, 162, 235, 1)',
-          borderWidth: 1,
-        },
-      ],
-    };
+  const backgroundColors = [
+    'rgba(255, 99, 132, 0.6)',
+    'rgba(54, 162, 235, 0.6)',
+    'rgba(255, 206, 86, 0.6)',
+    'rgba(75, 192, 192, 0.6)',
+    'rgba(153, 102, 255, 0.6)',
+    'rgba(255, 159, 64, 0.6)',
+    'rgba(199, 199, 199, 0.6)',
+    'rgba(83, 102, 255, 0.6)',
+    'rgba(40, 159, 64, 0.6)',
+    'rgba(210, 99, 132, 0.6)',
+    'rgba(255, 99, 132, 0.8)',  // Extra colors for more categories
+    'rgba(54, 162, 235, 0.8)'
+  ];
+
+  return {
+    labels,
+    datasets: [{
+      data,
+      backgroundColor: backgroundColors.slice(0, labels.length),
+      borderColor: backgroundColors.slice(0, labels.length).map(color => 
+        color.replace('0.6', '1').replace('0.8', '1')
+      ),
+      borderWidth: 2,
+    }],
   };
+};
+
+// Prepare data for bar chart - FIXED (Horizontal + Proper Scale)
+const getBarChartData = () => {
+  if (!facultyData || !facultyData.percentages || Object.keys(facultyData.percentages).length === 0) {
+    return null;
+  }
+  
+  const labels = Object.keys(facultyData.percentages);
+  const data = Object.values(facultyData.percentages).map(val => Number(val) || 0);
+
+  if (labels.length === 0 || data.every(d => d === 0)) {
+    return null;
+  }
+
+  return {
+    labels,
+    datasets: [{
+      label: 'Performance (%)',
+      data,
+      backgroundColor: 'rgba(54, 162, 235, 0.8)',
+      borderColor: 'rgba(54, 162, 235, 1)',
+      borderWidth: 2,
+      borderRadius: 4,
+      borderSkipped: false,
+    }],
+  };
+};
+
 
   // Calculate overall faculty performance percentage
   const getOverallPercentage = () => {
