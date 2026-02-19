@@ -40,14 +40,14 @@ const TechnicalSupport = () => {
     email: "vamshinaikramavath@gmail.com",
     phone: "+91 9014243908",
     role: "Lead Developer - V Soft",
-    photo: "/vsoft_founder.jpg" // Note the leading slash
+    photo: "/drjyotsna.jpeg" // Note the leading slash
   }
 };
 
   const handleContact = (method) => {
     switch (method) {
       case 'whatsapp':
-        window.open(`https://wa.me/919014243908?text=Hello%20Vamshi,%20I%20need%20help%20with%20the%20feedback%20system.`);
+        window.open(`https://wa.me/918522092885?text=Hello%20Vamshi,%20I%20need%20help%20with%20the%20feedback%20system.`);
         break;
       case 'phone':
         window.open(`tel:${contactDetails.developer.phone}`);
@@ -559,7 +559,7 @@ const TechnicalSupport = () => {
               </div>
               <button 
                 onClick={handleLogin} 
-                className="btn-primary"
+                className="btn-primary" 
                 disabled={isLoading}
               >
                 {isLoading && loadingType === "login" ? (
