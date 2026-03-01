@@ -261,7 +261,301 @@ app.get('/health', (req, res) => {
 // FILE UPLOAD ENDPOINTS
 // =============================================
 // Add this to your server.js - Debug endpoint to find missing faculties
- 
+ // =============================================
+// STUDENT MANAGEMENT ENDPOINTS
+// =============================================
+
+// Get all students with registration status
+app.get('/admin/students-with-status', async (req, res) => {
+  try {
+    const { class: cls, branch, academicYear } = req.query;
+    
+    if (!cls || !branch || !academicYear) {
+      return res.status(400).json({ error: 'Class, branch, and academic year are required' });
+    }
+    
+    const students = await Student.find({ 
+      branch: branch, 
+      academicYear: academicYear 
+    }).select('name hallticket branch academicYear email -_id');
+    
+    const studentsWithStatus = students.map(student => ({
+      name: student.name,
+      hallticket: student.hallticket,
+      branch: student.branch,
+      academicYear: student.academicYear,
+      registered: !!student.email,
+      email: student.email || null
+    }));
+    
+    res.json(studentsWithStatus);
+  } catch (error) {
+    console.error('Failed to fetch students:', error);
+    res.status(500).json({ error: 'Failed to fetch students' });
+  }
+});
+
+// Add a single student
+app.post('/admin/add-student', async (req, res) => {
+  try {
+    const { name, hallticket, branch, academicYear, class: cls } = req.body;
+    
+    if (!name || !hallticket || !branch || !academicYear || !cls) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    // Check if student already exists in this academic year
+    const existingStudent = await Student.findOne({ 
+      hallticket: hallticket,
+      academicYear: academicYear 
+    });
+    
+    if (existingStudent) {
+      return res.status(400).json({ error: 'Student with this hallticket already exists for this academic year' });
+    }
+
+    // Create new student
+    const student = await Student.create({
+      name,
+      hallticket,
+      branch,
+      academicYear,
+      password: bcrypt.hashSync(hallticket, 10) // Default password is hallticket
+    });
+
+    // Create feedback submission record
+    await FeedbackSubmission.findOneAndUpdate(
+      {
+        hallticket: hallticket,
+        class: cls,
+        branch: branch,
+        academicYear: academicYear
+      },
+      {
+        hallticket: hallticket,
+        class: cls,
+        branch: branch,
+        academicYear: academicYear,
+        initial: false,
+        final: false
+      },
+      { upsert: true, new: true }
+    );
+
+    res.json({ 
+      success: true, 
+      message: 'Student added successfully',
+      student: {
+        name: student.name,
+        hallticket: student.hallticket,
+        branch: student.branch,
+        academicYear: student.academicYear
+      }
+    });
+  } catch (error) {
+    console.error('Error adding student:', error);
+    res.status(500).json({ error: 'Failed to add student: ' + error.message });
+  }
+});
+
+// Delete a student
+app.delete('/admin/delete-student/:hallticket', async (req, res) => {
+  try {
+    const { hallticket } = req.params;
+    const { academicYear } = req.query;
+    
+    if (!hallticket || !academicYear) {
+      return res.status(400).json({ error: 'Hallticket and academic year are required' });
+    }
+
+    // Delete student
+    const student = await Student.findOneAndDelete({ 
+      hallticket: hallticket,
+      academicYear: academicYear 
+    });
+
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+
+    // Delete feedback submissions
+    await FeedbackSubmission.deleteMany({ 
+      hallticket: hallticket,
+      academicYear: academicYear 
+    });
+
+    // Delete feedback responses
+    await Feedback.deleteMany({ 
+      hallticket: hallticket,
+      academicYear: academicYear 
+    });
+
+    res.json({ 
+      success: true, 
+      message: 'Student deleted successfully',
+      student: {
+        name: student.name,
+        hallticket: student.hallticket
+      }
+    });
+  } catch (error) {
+    console.error('Error deleting student:', error);
+    res.status(500).json({ error: 'Failed to delete student: ' + error.message });
+  }
+});
+
+// Bulk delete students
+app.post('/admin/bulk-delete-students', async (req, res) => {
+  try {
+    const { halltickets, academicYear } = req.body;
+    
+    if (!halltickets || !Array.isArray(halltickets) || halltickets.length === 0 || !academicYear) {
+      return res.status(400).json({ error: 'Halltickets array and academic year are required' });
+    }
+
+    // Delete students
+    const result = await Student.deleteMany({ 
+      hallticket: { $in: halltickets },
+      academicYear: academicYear 
+    });
+
+    // Delete feedback submissions
+    await FeedbackSubmission.deleteMany({ 
+      hallticket: { $in: halltickets },
+      academicYear: academicYear 
+    });
+
+    // Delete feedback responses
+    await Feedback.deleteMany({ 
+      hallticket: { $in: halltickets },
+      academicYear: academicYear 
+    });
+
+    res.json({ 
+      success: true, 
+      message: `Successfully deleted ${result.deletedCount} students`,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error('Error bulk deleting students:', error);
+    res.status(500).json({ error: 'Failed to delete students: ' + error.message });
+  }
+});
+
+// Update student information
+app.put('/admin/update-student/:hallticket', async (req, res) => {
+  try {
+    const { hallticket } = req.params;
+    const { name, branch, academicYear, email, class: cls } = req.body;
+    
+    if (!hallticket || !academicYear) {
+      return res.status(400).json({ error: 'Hallticket and academic year are required' });
+    }
+
+    const student = await Student.findOne({ 
+      hallticket: hallticket,
+      academicYear: academicYear 
+    });
+
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+
+    // Update fields
+    if (name) student.name = name;
+    if (branch) student.branch = branch;
+    if (email) student.email = email;
+
+    await student.save();
+
+    res.json({ 
+      success: true, 
+      message: 'Student updated successfully',
+      student: {
+        name: student.name,
+        hallticket: student.hallticket,
+        branch: student.branch,
+        academicYear: student.academicYear,
+        email: student.email
+      }
+    });
+  } catch (error) {
+    console.error('Error updating student:', error);
+    res.status(500).json({ error: 'Failed to update student: ' + error.message });
+  }
+});
+
+// Reset student password
+app.post('/admin/reset-student-password/:hallticket', async (req, res) => {
+  try {
+    const { hallticket } = req.params;
+    const { academicYear } = req.body;
+    
+    if (!hallticket || !academicYear) {
+      return res.status(400).json({ error: 'Hallticket and academic year are required' });
+    }
+
+    const student = await Student.findOne({ 
+      hallticket: hallticket,
+      academicYear: academicYear 
+    });
+
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+
+    // Reset password to hallticket
+    student.password = bcrypt.hashSync(hallticket, 10);
+    await student.save();
+
+    res.json({ 
+      success: true, 
+      message: 'Password reset successfully. New password is the hallticket number.',
+      student: {
+        name: student.name,
+        hallticket: student.hallticket
+      }
+    });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res.status(500).json({ error: 'Failed to reset password: ' + error.message });
+  }
+});
+
+// Get student details by hallticket
+app.get('/admin/student/:hallticket', async (req, res) => {
+  try {
+    const { hallticket } = req.params;
+    const { academicYear } = req.query;
+    
+    if (!hallticket || !academicYear) {
+      return res.status(400).json({ error: 'Hallticket and academic year are required' });
+    }
+
+    const student = await Student.findOne({ 
+      hallticket: hallticket,
+      academicYear: academicYear 
+    }).select('name hallticket branch academicYear email -_id');
+
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+
+    // Get feedback submission status
+    const submission = await FeedbackSubmission.findOne({
+      hallticket: hallticket,
+      academicYear: academicYear
+    }).select('initial final initialDate finalDate -_id');
+
+    res.json({
+      student,
+      submission: submission || { initial: false, final: false }
+    });
+  } catch (error) {
+    console.error('Error fetching student:', error);
+    res.status(500).json({ error: 'Failed to fetch student details' });
+  }
+});
 // Upload students CSV
 app.post('/upload-students', upload.single('file'), async (req, res) => {
   try {

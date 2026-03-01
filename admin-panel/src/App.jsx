@@ -8,6 +8,7 @@ import PasswordReset from './PasswordReset';
 import AdminLogin from './AdminLogin';
 import FacultyTrackingPage from './FacultyTrackingPage';
 import FacultyNameCorrection from "./FacultyNameCorrection";
+import StudentManagement from './StudentManagement';
 import './App.css'
 import {
   Chart as ChartJS,
@@ -1120,6 +1121,12 @@ const getBarChartData = () => {
 >
   🔧 Faculty Name Correction
 </button>
+<button 
+  className={`nav-tab ${currentView === 'student-management' ? 'active' : ''}`}
+  onClick={() => setCurrentView('student-management')}
+>
+  👥 Student Management
+</button>
           <button onClick={handleLogout} className="logout-btn-nav">
             🚪 Logout
           </button>
@@ -1133,6 +1140,13 @@ const getBarChartData = () => {
         {currentView === 'password-reset' && <PasswordReset />}
         {currentView === 'faculty-tracking' && <FacultyTrackingPage />}
         {currentView === 'faculty-correction' && <FacultyNameCorrection />}
+        {currentView === 'student-management' && (
+  <StudentManagement 
+    classSel={classSel}
+    branchSel={branchSel}
+    academicYear={academicYear}
+  />
+)}
 
       </main>
     </div>
